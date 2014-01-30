@@ -58,6 +58,21 @@ handles.output = hObject;
 % Update handles structure
 guidata(hObject, handles);
 
+% Check input arguments
+if(length(varargin) ~= 3)
+    error('Inputs must be 3 functions as equations for the Curve!');
+end
+
+
+% Assign Function Handles, indices: x = 1, y = 2, z = 3
+handles.functions = cell(3,1);
+for i = 1:3
+    handles.functions{i} = varargin(i);
+    func = handles.functions{i}
+    disp((handles.functions{i}{1}(2)))
+end
+
+
 % UIWAIT makes CurvePlotter3D wait for user response (see UIRESUME)
 % uiwait(handles.figure1);
 
