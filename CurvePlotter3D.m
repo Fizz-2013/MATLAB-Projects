@@ -22,7 +22,7 @@ function varargout = CurvePlotter3D(varargin)
 
 % Edit the above text to modify the response to help CurvePlotter3D
 
-% Last Modified by GUIDE v2.5 30-Jan-2014 18:01:00
+% Last Modified by GUIDE v2.5 30-Jan-2014 23:38:39
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -55,10 +55,16 @@ function CurvePlotter3D_OpeningFcn(hObject, eventdata, handles, varargin)
 % Choose default command line output for CurvePlotter3D
 handles.output = hObject;
 
+axes(handles.bigGraph);
 
+% Default Initializations
 handles.xString = 'sin(t)';
 handles.yString = 'cos(t)';
 handles.zString = 't';
+handles.divisions = 10;
+handles.tStart = 0;
+handles.tEnd = 1;
+
 updateFunctionButton_Callback(handles.updateFunctionButton, eventdata, handles);
 
 % Update handles structure
@@ -241,34 +247,181 @@ function updateFunctionButton_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-t=1;
+
+handles = checkDivisionNumber(handles);
+handles = checkCurveDomain(handles);
+handles = checkFunctionText(handles);
+handles = setFunctions(handles);
+createCurve(handles);
+
+guidata(handles.figure1, handles);
+
+function handles = checkDivisionNumber(handles)
+try
+    boxString = get(handles.divisionBox, 'String');
+    if ~(isa(eval([(boxString) ';']),'double'))
+        error('Must be a valid numerical expression.');
+    end
+    testNum = eval([boxString ';']);
+    
+    %if number is not a positive nonzero integer
+    if(testNum <= 0 || mod(testNum, 1) ~= 0)
+        error('Number of divisions must be a positive integer!');
+    end
+catch err
+    set(handles.divisionBox, 'String', handles.divisions);
+    disp(['ERROR SETTING NUMBER OF DIVISIONS: ' err.message])
+end
+
+handles.divisions = eval([get(handles.divisionBox, 'String') ';']);
+set(handles.divisionBox, 'String', handles.divisions);
+
+guidata(handles.figure1, handles);
+
+function handles = checkCurveDomain(handles)
 
 try
-    eval(get(handles.xFunction, 'String'));
+    startString = get(handles.tStartBox, 'String');
+    endString = get(handles.tEndBox, 'String');
+    if ~(isa(eval([(startString) ';']),'double') && isa(eval([(endString) ';']),'double'))
+        error('Must be a valid numerical expression.');
+    end
+    testStart = eval([startString ';']);
+    testEnd = eval([endString ';']);
+    
+    if ~(testStart <= testEnd)
+        error('Invalid boundary conditions! Respect the comparison signs.');
+    end
+catch err
+    set(handles.tStartBox, 'String', handles.tStart);
+    set(handles.tEndBox, 'String', handles.tEnd);
+    disp(['INTERVAL ERROR: ' err.message])
+end
+
+handles.tStart = eval([get(handles.tStartBox, 'String') ';']);
+handles.tEnd = eval([get(handles.tEndBox, 'String') ';']);
+set(handles.tStartBox, 'String', handles.tStart);
+set(handles.tEndBox, 'String', handles.tEnd);
+
+guidata(handles.figure1, handles);
+
+function handles = checkFunctionText(handles)
+
+%dummy test variable
+t = 1;
+% t = handles.t(1);
+
+%If corresponding text box has invalid code, reset to previous
+try
+    eval([get(handles.xFunction, 'String') ';'])
+    eval(['@(t) ' get(handles.xFunction, 'String') ';']);
     handles.xString = get(handles.xFunction, 'String');
 catch err
     set(handles.xFunction, 'String', handles.xString);
+    disp(['FUNCTION ERROR: ' err.message])
 end
 
 try
-    eval(get(handles.yFunction, 'String'));
+    eval([get(handles.yFunction, 'String') ';'])
+    eval(['@(t) ' get(handles.yFunction, 'String') ';']);
     handles.yString = get(handles.yFunction, 'String');
 catch err
     set(handles.yFunction, 'String', handles.yString);
+    disp(['FUNCTION ERROR: ' err.message])
 end
 
 try
-    eval(get(handles.zFunction, 'String'));
+    eval([get(handles.zFunction, 'String') ';'])
+    eval(['@(t) ' get(handles.zFunction, 'String') ';']);
     handles.zString = get(handles.zFunction, 'String');
 catch err
+    disp(['FUNCTION ERROR: ' err.message])
     set(handles.zFunction, 'String', handles.zString);
 end
 
+guidata(handles.figure1, handles);
 
-handles.x = @(t) eval(xString);
-handles.y = @(t) eval(yString);
-handles.z = @(t) eval(zString);
+function handles = setFunctions(handles)
+%Sets functions to text
 
-handles.r = @(t) {eval(xString), eval(yString), eval(zString)};
+handles.r = eval(['@(t) {' handles.xString ',' handles.yString ',' handles.zString '}']);
 
-guidata(hObject, handles);
+guidata(handles.figure1, handles);
+
+function createCurve(handles)
+interval = 1/handles.divisions;
+t = handles.tStart:interval:handles.tEnd;
+handles.curve = handles.r(t);
+
+handles.x = cell2mat(handles.curve(1));
+handles.y = cell2mat(handles.curve(2));
+handles.z = cell2mat(handles.curve(3));
+
+plot3(handles.x, handles.y, handles.z);
+
+function tStartBox_Callback(hObject, eventdata, handles)
+% hObject    handle to tStartBox (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of tStartBox as text
+%        str2double(get(hObject,'String')) returns contents of tStartBox as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function tStartBox_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to tStartBox (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function tEndBox_Callback(hObject, eventdata, handles)
+% hObject    handle to tEndBox (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of tEndBox as text
+%        str2double(get(hObject,'String')) returns contents of tEndBox as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function tEndBox_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to tEndBox (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function divisionBox_Callback(hObject, eventdata, handles)
+% hObject    handle to divisionBox (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of divisionBox as text
+%        str2double(get(hObject,'String')) returns contents of divisionBox as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function divisionBox_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to divisionBox (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
