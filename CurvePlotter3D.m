@@ -22,7 +22,7 @@ function varargout = CurvePlotter3D(varargin)
 
 % Edit the above text to modify the response to help CurvePlotter3D
 
-% Last Modified by GUIDE v2.5 30-Jan-2014 08:49:12
+% Last Modified by GUIDE v2.5 30-Jan-2014 18:01:00
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -55,26 +55,21 @@ function CurvePlotter3D_OpeningFcn(hObject, eventdata, handles, varargin)
 % Choose default command line output for CurvePlotter3D
 handles.output = hObject;
 
+
+handles.xString = 'sin(t)';
+handles.yString = 'cos(t)';
+handles.zString = 't';
+updateFunctionButton_Callback(handles.updateFunctionButton, eventdata, handles);
+
 % Update handles structure
 guidata(hObject, handles);
 
-% Check input arguments
-if(length(varargin) ~= 3)
-    error('Inputs must be 3 functions as equations for the Curve!');
-end
 
-
-% Assign Function Handles, indices: x = 1, y = 2, z = 3
-handles.functions = cell(3,1);
-for i = 1:3
-    handles.functions{i} = varargin(i);
-    func = handles.functions{i}
-    disp((handles.functions{i}{1}(2)))
-end
 
 
 % UIWAIT makes CurvePlotter3D wait for user response (see UIRESUME)
 % uiwait(handles.figure1);
+
 
 
 % --- Outputs from this function are returned to the command line.
@@ -131,3 +126,149 @@ function timeBox_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+function index = componentIndex(component)
+% get the index for the specified component
+switch(class(component))
+    case 'double'
+        if(component > 0 && component < 3)
+            index = component;
+            return;
+        end
+    case 'char'
+        switch(component)
+            case 'x'
+                index = 1;
+                return;
+            case 'y'
+                index = 2;
+                return;
+            case 'z'
+                index = 3;
+                return;
+        end
+end
+
+%reached if no case is true
+error('Invalid input! Component must be either x, y, z, or 0, 1, 2');
+
+function name = getComponentName(component)
+if(~strcmp(class(component),'double') || component < 1 || component > 3)
+    error('Invalid input! Must be an integer of 1, 2, or 3.');
+end
+switch(component)
+    case 1
+        name = 'x';
+    case 2
+        name = 'y';
+    case 3
+        name = 'z';
+end
+
+
+
+function xFunction_Callback(hObject, eventdata, handles)
+% hObject    handle to xFunction (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of xFunction as text
+%        str2double(get(hObject,'String')) returns contents of xFunction as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function xFunction_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to xFunction (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function yFunction_Callback(hObject, eventdata, handles)
+% hObject    handle to yFunction (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of yFunction as text
+%        str2double(get(hObject,'String')) returns contents of yFunction as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function yFunction_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to yFunction (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function zFunction_Callback(hObject, eventdata, handles)
+% hObject    handle to zFunction (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of zFunction as text
+%        str2double(get(hObject,'String')) returns contents of zFunction as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function zFunction_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to zFunction (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in updateFunctionButton.
+function updateFunctionButton_Callback(hObject, eventdata, handles)
+% hObject    handle to updateFunctionButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+t=1;
+
+try
+    eval(get(handles.xFunction, 'String'));
+    handles.xString = get(handles.xFunction, 'String');
+catch err
+    set(handles.xFunction, 'String', handles.xString);
+end
+
+try
+    eval(get(handles.yFunction, 'String'));
+    handles.yString = get(handles.yFunction, 'String');
+catch err
+    set(handles.yFunction, 'String', handles.yString);
+end
+
+try
+    eval(get(handles.zFunction, 'String'));
+    handles.zString = get(handles.zFunction, 'String');
+catch err
+    set(handles.zFunction, 'String', handles.zString);
+end
+
+
+handles.x = @(t) eval(xString);
+handles.y = @(t) eval(yString);
+handles.z = @(t) eval(zString);
+
+handles.r = @(t) {eval(xString), eval(yString), eval(zString)};
+
+guidata(hObject, handles);
