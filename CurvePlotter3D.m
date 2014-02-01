@@ -55,7 +55,6 @@ function CurvePlotter3D_OpeningFcn(hObject, eventdata, handles, varargin)
 % Choose default command line output for CurvePlotter3D
 handles.output = hObject;
 
-axes(handles.bigGraph);
 
 % Default Initializations
 handles.xString = 'sin(t)';
@@ -252,7 +251,8 @@ handles = checkDivisionNumber(handles);
 handles = checkCurveDomain(handles);
 handles = checkFunctionText(handles);
 handles = setFunctions(handles);
-createCurve(handles);
+handles = createCurve(handles);
+drawCurve(handles);
 
 guidata(handles.figure1, handles);
 
@@ -348,8 +348,8 @@ handles.r = eval(['@(t) {' handles.xString ',' handles.yString ',' handles.zStri
 
 guidata(handles.figure1, handles);
 
-function createCurve(handles)
-interval = 1/handles.divisions;
+function handles = createCurve(handles)
+interval = (handles.tEnd-handles.tStart)/handles.divisions;
 t = handles.tStart:interval:handles.tEnd;
 handles.curve = handles.r(t);
 
@@ -357,7 +357,11 @@ handles.x = cell2mat(handles.curve(1));
 handles.y = cell2mat(handles.curve(2));
 handles.z = cell2mat(handles.curve(3));
 
+guidata(handles.figure1, handles);
+
+function drawCurve(handles)
 plot3(handles.x, handles.y, handles.z);
+
 
 function tStartBox_Callback(hObject, eventdata, handles)
 % hObject    handle to tStartBox (see GCBO)
