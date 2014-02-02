@@ -22,7 +22,7 @@ function varargout = CurvePlotter3D(varargin)
 
 % Edit the above text to modify the response to help CurvePlotter3D
 
-% Last Modified by GUIDE v2.5 01-Feb-2014 21:46:15
+% Last Modified by GUIDE v2.5 01-Feb-2014 22:17:04
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -64,6 +64,10 @@ handles.divisions = 50;
 handles.tStart = 0;
 handles.tEnd = 10;
 handles.tPoint = 0;
+
+% Initialize Cursor
+handles.cursorObj = datacursormode(handles.figure1);
+set(handles.cursorObj, 'UpdateFcn', @displayDataPoint);
 
 handles = updateFunctionButton_Callback(handles.updateFunctionButton, eventdata, handles);
 
@@ -386,6 +390,9 @@ handles.x = cell2mat(handles.curve(1));
 handles.y = cell2mat(handles.curve(2));
 handles.z = cell2mat(handles.curve(3));
 
+setappdata(0, 'CurvePlotter3D', gcf);
+setappdata(gcf, 'Time', t);
+
 guidata(handles.figure1, handles);
 
 function drawCurve(handles)
@@ -502,8 +509,25 @@ set(handles.tEndBox, 'String', handles.tEnd);
 set(handles.divisionBox, 'String', handles.divisions);
 
 
-% --------------------------------------------------------------------
-function uitoggletool4_OnCallback(hObject, eventdata, handles)
-% hObject    handle to uitoggletool4 (see GCBO)
+function text = displayDataPoint(obj, event_obj)
+% Customizes text of data tip
+position = get(event_obj, 'Position');
+dataIndex = get(event_obj, 'DataIndex');
+CurvePlotter3D = getappdata(0, 'CurvePlotter3D');
+time = getappdata(CurvePlotter3D, 'Time');
+disp(time(dataIndex));
+text = sprintf('X: %f\nY: %f\nZ: %f\nTime: %f',...
+    position(1),...
+    position(2),...
+    position(3),...
+    time(dataIndex));
+
+
+% --- Executes when user attempts to close figure1.
+function figure1_CloseRequestFcn(hObject, eventdata, handles)
+% hObject    handle to figure1 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+
+% Hint: delete(hObject) closes the figure
+delete(hObject);
