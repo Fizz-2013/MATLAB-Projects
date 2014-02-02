@@ -22,7 +22,7 @@ function varargout = CurvePlotter3D(varargin)
 
 % Edit the above text to modify the response to help CurvePlotter3D
 
-% Last Modified by GUIDE v2.5 30-Jan-2014 23:38:39
+% Last Modified by GUIDE v2.5 01-Feb-2014 21:46:15
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -60,11 +60,12 @@ handles.output = hObject;
 handles.xString = 'sin(t)';
 handles.yString = 'cos(t)';
 handles.zString = 't';
-handles.divisions = 10;
+handles.divisions = 50;
 handles.tStart = 0;
-handles.tEnd = 1;
+handles.tEnd = 10;
+handles.tPoint = 0;
 
-updateFunctionButton_Callback(handles.updateFunctionButton, eventdata, handles);
+handles = updateFunctionButton_Callback(handles.updateFunctionButton, eventdata, handles);
 
 % Update handles structure
 guidata(hObject, handles);
@@ -88,16 +89,6 @@ function varargout = CurvePlotter3D_OutputFcn(hObject, eventdata, handles)
 varargout{1} = handles.output;
 
 
-% --- Executes on slider movement.
-function timeSlider_Callback(hObject, eventdata, handles)
-% hObject    handle to timeSlider (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'Value') returns position of slider
-%        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
-
-
 % --- Executes during object creation, after setting all properties.
 function timeSlider_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to timeSlider (see GCBO)
@@ -109,15 +100,6 @@ if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColo
     set(hObject,'BackgroundColor',[.9 .9 .9]);
 end
 
-
-
-function timeBox_Callback(hObject, eventdata, handles)
-% hObject    handle to timeBox (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of timeBox as text
-%        str2double(get(hObject,'String')) returns contents of timeBox as a double
 
 
 % --- Executes during object creation, after setting all properties.
@@ -181,6 +163,7 @@ function xFunction_Callback(hObject, eventdata, handles)
 %        str2double(get(hObject,'String')) returns contents of xFunction as a double
 
 
+
 % --- Executes during object creation, after setting all properties.
 function xFunction_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to xFunction (see GCBO)
@@ -239,9 +222,55 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 
+% --- Executes on slider movement.
+function timeSlider_Callback(hObject, eventdata, handles)
+% hObject    handle to timeSlider (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'Value') returns position of slider
+%        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
+handles.tPoint = get(hObject, 'Value');
+set(handles.timeBox, 'String', handles.tPoint);
+updateGraph(handles);
+guidata(handles.figure1, handles);
+
+
+
+function timeBox_Callback(hObject, eventdata, handles)
+% hObject    handle to timeBox (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of timeBox as text
+%        str2double(get(hObject,'String')) returns contents of timeBox as a double
+
+try
+    boxString = get(handles.timeBox, 'String');
+    if ~(isa(eval([(boxString) ';']),'double'))
+        error('Must be a valid numerical expression.');
+    end
+    testNum = eval([boxString ';']);
+    
+    %if number is within domain
+    if(testNum < get(handles.timeSlider, 'Min') || testNum > get(handles.timeSlider, 'Max'))
+        error('Value must be in domain!');
+    end
+catch err
+    set(handles.timeBox, 'String', handles.tPoint);
+    disp(['ERROR SETTING TIME VALUE: ' err.message])
+end
+
+handles.tPoint = eval([get(handles.timeBox, 'String') ';']);
+set(handles.timeBox, 'String', handles.tPoint);
+set(handles.timeSlider, 'Value', handles.tPoint);
+updateGraph(handles);
+
+guidata(handles.figure1, handles);
+
 
 % --- Executes on button press in updateFunctionButton.
-function updateFunctionButton_Callback(hObject, eventdata, handles)
+function handles = updateFunctionButton_Callback(hObject, eventdata, handles)
 % hObject    handle to updateFunctionButton (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -252,7 +281,7 @@ handles = checkCurveDomain(handles);
 handles = checkFunctionText(handles);
 handles = setFunctions(handles);
 handles = createCurve(handles);
-drawCurve(handles);
+updateGraph(handles);
 
 guidata(handles.figure1, handles);
 
@@ -300,6 +329,7 @@ end
 
 handles.tStart = eval([get(handles.tStartBox, 'String') ';']);
 handles.tEnd = eval([get(handles.tEndBox, 'String') ';']);
+handles.tPoint = handles.tStart;
 set(handles.tStartBox, 'String', handles.tStart);
 set(handles.tEndBox, 'String', handles.tEnd);
 
@@ -308,7 +338,7 @@ guidata(handles.figure1, handles);
 function handles = checkFunctionText(handles)
 
 %dummy test variable
-t = 1;
+t = handles.tStart;
 % t = handles.t(1);
 
 %If corresponding text box has invalid code, reset to previous
@@ -349,8 +379,7 @@ handles.r = eval(['@(t) {' handles.xString ',' handles.yString ',' handles.zStri
 guidata(handles.figure1, handles);
 
 function handles = createCurve(handles)
-interval = (handles.tEnd-handles.tStart)/handles.divisions;
-t = handles.tStart:interval:handles.tEnd;
+t = linspace(handles.tStart, handles.tEnd, handles.divisions+1);
 handles.curve = handles.r(t);
 
 handles.x = cell2mat(handles.curve(1));
@@ -362,6 +391,18 @@ guidata(handles.figure1, handles);
 function drawCurve(handles)
 plot3(handles.x, handles.y, handles.z);
 
+function drawPoint(handles)
+point = cell2mat(handles.r(handles.tPoint));
+x = point(1);
+y = point(2);
+z = point(3);
+plot3(x,y,z,'o','Color','red');
+
+function updateGraph(handles)
+drawCurve(handles);
+hold on;
+drawPoint(handles);
+hold off;
 
 function tStartBox_Callback(hObject, eventdata, handles)
 % hObject    handle to tStartBox (see GCBO)
@@ -429,3 +470,40 @@ function divisionBox_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+
+% --------------------------------------------------------------------
+function uitoggletool9_OnCallback(hObject, eventdata, handles)
+% hObject    handle to uitoggletool9 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+grid(handles.bigGraph, 'on');
+
+
+% --------------------------------------------------------------------
+function uitoggletool9_OffCallback(hObject, eventdata, handles)
+% hObject    handle to uitoggletool9 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+grid(handles.bigGraph, 'off');
+
+
+% --- Executes on button press in revertButton.
+function revertButton_Callback(hObject, eventdata, handles)
+% hObject    handle to revertButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+set(handles.xFunction, 'String', handles.xString);
+set(handles.yFunction, 'String', handles.yString);
+set(handles.zFunction, 'String', handles.zString);
+set(handles.tStartBox, 'String', handles.tStart);
+set(handles.tEndBox, 'String', handles.tEnd);
+set(handles.divisionBox, 'String', handles.divisions);
+
+
+% --------------------------------------------------------------------
+function uitoggletool4_OnCallback(hObject, eventdata, handles)
+% hObject    handle to uitoggletool4 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
