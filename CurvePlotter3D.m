@@ -22,7 +22,7 @@ function varargout = CurvePlotter3D(varargin)
 
 % Edit the above text to modify the response to help CurvePlotter3D
 
-% Last Modified by GUIDE v2.5 01-Feb-2014 22:17:04
+% Last Modified by GUIDE v2.5 05-Feb-2014 23:23:03
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -64,6 +64,11 @@ handles.divisions = 50;
 handles.tStart = 0;
 handles.tEnd = 10;
 handles.tPoint = 0;
+handles.tRate = 1;
+handles.timer = timer('ExecutionMode', 'fixedRate', ...
+    'Period', 1/10, ...
+    'TimerFcn', @updateTimer);
+
 
 % Initialize Cursor
 handles.cursorObj = datacursormode(handles.figure1);
@@ -285,7 +290,16 @@ handles = checkCurveDomain(handles);
 handles = checkFunctionText(handles);
 handles = setFunctions(handles);
 handles = createCurve(handles);
+handles = updateTPoint(handles);
 updateGraph(handles);
+
+guidata(handles.figure1, handles);
+
+function handles = updateTPoint(handles)
+set(handles.timeBox, 'String', handles.tPoint);
+set(handles.timeSlider, 'Min', handles.tStart);
+set(handles.timeSlider, 'Max', handles.tEnd);
+set(handles.timeSlider, 'Value', handles.tPoint);
 
 guidata(handles.figure1, handles);
 
@@ -397,6 +411,7 @@ guidata(handles.figure1, handles);
 
 function drawCurve(handles)
 plot3(handles.x, handles.y, handles.z);
+guidata(handles.figure1, handles);
 
 function drawPoint(handles)
 point = cell2mat(handles.r(handles.tPoint));
@@ -404,12 +419,14 @@ x = point(1);
 y = point(2);
 z = point(3);
 plot3(x,y,z,'o','Color','red');
+guidata(handles.figure1, handles);
 
 function updateGraph(handles)
 drawCurve(handles);
 hold on;
 drawPoint(handles);
 hold off;
+guidata(handles.figure1, handles);
 
 function tStartBox_Callback(hObject, eventdata, handles)
 % hObject    handle to tStartBox (see GCBO)
@@ -529,5 +546,60 @@ function figure1_CloseRequestFcn(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
+delete(handles.timer);
+
 % Hint: delete(hObject) closes the figure
 delete(hObject);
+
+
+
+function rateText_Callback(hObject, eventdata, handles)
+% hObject    handle to rateText (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of rateText as text
+%        str2double(get(hObject,'String')) returns contents of rateText as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function rateText_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to rateText (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in playbackButton.
+function playbackButton_Callback(hObject, eventdata, handles)
+% hObject    handle to playbackButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if strcmp(get(handles.timer, 'Running'), 'off')
+    start(handles.timer);
+    set(handles.playbackButton, 'String', 'Stop');
+else
+    stop(handles.timer);
+    set(handles.playbackButton, 'String', 'Play');
+end
+guidata(handles.figure1, handles);
+
+function updateTimer(object, eventdata)
+hfigure = getappdata(0, 'CurvePlotter3D');
+handles = guidata(hfigure);
+if(handles.tPoint + handles.tRate/10 <= handles.tEnd);
+    handles.tPoint = handles.tPoint + handles.tRate/10;
+    guidata(hfigure, handles);
+    handles = updateTPoint(handles);
+    guidata(hfigure, handles);
+    updateGraph(handles);
+    guidata(hfigure, handles);
+else
+    stop(handles.timer);
+end
+guidata(hfigure, handles);
