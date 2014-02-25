@@ -356,8 +356,9 @@ guidata(handles.figure1, handles);
 function handles = checkFunctionText(handles)
 
 %dummy test variable
-t = handles.tStart;
+% t = handles.tStart;
 % t = handles.t(1);
+syms('t');
 
 %If corresponding text box has invalid code, reset to previous
 variables = symvar(get(handles.xBox, 'String'));
@@ -391,6 +392,37 @@ function handles = setFunctions(handles)
 
 handles.curve = [handles.xFunction; handles.yFunction; handles.zFunction];
 
+set(handles.positionText, 'String', ...
+    ['< ' char(handles.xFunction) ', '...
+    char(handles.yFunction) ', ' ...
+    char(handles.zFunction) ' >']);
+set(handles.velocityText, 'String', ...
+    ['< ' char(diff(handles.xFunction)) ', '...
+    char(diff(handles.yFunction)) ', ' ...
+    char(diff(handles.zFunction)) ' >']);
+set(handles.accelerationText, 'String', ...
+    ['< ' char(diff(handles.xFunction, 2)) ', '...
+    char(diff(handles.yFunction, 2)) ', ' ...
+    char(diff(handles.zFunction, 2)) ' >']);
+
+
+help = sprintf('i: %s\nj: %s\nk: %s', ...
+    char(handles.xFunction), ...
+    char(handles.yFunction), ...
+    char(handles.zFunction));
+set(handles.positionText, 'ToolTipString', help);
+help = sprintf('i: %s\nj: %s\nk: %s', ...
+    char(diff(handles.xFunction)), ...
+    char(diff(handles.yFunction)), ...
+    char(diff(handles.zFunction)));
+set(handles.velocityText, 'ToolTipString', help);
+help = sprintf('i: %s\nj: %s\nk: %s', ...
+    char(diff(handles.xFunction, 2)), ...
+    char(diff(handles.yFunction, 2)), ...
+    char(diff(handles.zFunction, 2)));
+set(handles.accelerationText, 'ToolTipString', help);
+
+
 guidata(handles.figure1, handles);
 
 function handles = createCurve(handles)
@@ -408,7 +440,7 @@ curve = (handles.r(t));
 x = curve(1,:);
 y = curve(2,:);
 z = curve(3,:);
-disp(curve)
+
 plot3(x,y,z);
 guidata(handles.figure1, handles);
 
@@ -517,9 +549,9 @@ function revertButton_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-set(handles.xBox, 'String', handles.xFunction);
-set(handles.yBox, 'String', handles.yFunction);
-set(handles.zBox, 'String', handles.zFunction);
+set(handles.xBox, 'String', char(handles.xFunction));
+set(handles.yBox, 'String', char(handles.yFunction));
+set(handles.zBox, 'String', char(handles.zFunction));
 set(handles.tStartBox, 'String', handles.tStart);
 set(handles.tEndBox, 'String', handles.tEnd);
 set(handles.divisionBox, 'String', handles.divisions);
