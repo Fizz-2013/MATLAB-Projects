@@ -22,7 +22,7 @@ function varargout = CurvePlotter3D(varargin)
 
 % Edit the above text to modify the response to help CurvePlotter3D
 
-% Last Modified by GUIDE v2.5 05-Feb-2014 23:23:03
+% Last Modified by GUIDE v2.5 24-Feb-2014 21:34:24
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -57,9 +57,9 @@ handles.output = hObject;
 
 
 % Default Initializations
-handles.xString = 'sin(t)';
-handles.yString = 'cos(t)';
-handles.zString = 't';
+handles.xFunction = 'sin(t)';
+handles.yFunction = 'cos(t)';
+handles.zFunction = 't';
 handles.divisions = 50;
 handles.tStart = 0;
 handles.tEnd = 10;
@@ -163,19 +163,19 @@ end
 
 
 
-function xFunction_Callback(hObject, eventdata, handles)
-% hObject    handle to xFunction (see GCBO)
+function xBox_Callback(hObject, eventdata, handles)
+% hObject    handle to xBox (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hints: get(hObject,'String') returns contents of xFunction as text
-%        str2double(get(hObject,'String')) returns contents of xFunction as a double
+% Hints: get(hObject,'String') returns contents of xBox as text
+%        str2double(get(hObject,'String')) returns contents of xBox as a double
 
 
 
 % --- Executes during object creation, after setting all properties.
-function xFunction_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to xFunction (see GCBO)
+function xBox_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to xBox (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 
@@ -187,18 +187,18 @@ end
 
 
 
-function yFunction_Callback(hObject, eventdata, handles)
-% hObject    handle to yFunction (see GCBO)
+function yBox_Callback(hObject, eventdata, handles)
+% hObject    handle to yBox (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hints: get(hObject,'String') returns contents of yFunction as text
-%        str2double(get(hObject,'String')) returns contents of yFunction as a double
+% Hints: get(hObject,'String') returns contents of yBox as text
+%        str2double(get(hObject,'String')) returns contents of yBox as a double
 
 
 % --- Executes during object creation, after setting all properties.
-function yFunction_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to yFunction (see GCBO)
+function yBox_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to yBox (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 
@@ -210,18 +210,18 @@ end
 
 
 
-function zFunction_Callback(hObject, eventdata, handles)
-% hObject    handle to zFunction (see GCBO)
+function zBox_Callback(hObject, eventdata, handles)
+% hObject    handle to zBox (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hints: get(hObject,'String') returns contents of zFunction as text
-%        str2double(get(hObject,'String')) returns contents of zFunction as a double
+% Hints: get(hObject,'String') returns contents of zBox as text
+%        str2double(get(hObject,'String')) returns contents of zBox as a double
 
 
 % --- Executes during object creation, after setting all properties.
-function zFunction_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to zFunction (see GCBO)
+function zBox_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to zBox (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 
@@ -255,11 +255,11 @@ function timeBox_Callback(hObject, eventdata, handles)
 %        str2double(get(hObject,'String')) returns contents of timeBox as a double
 
 try
-    boxString = get(handles.timeBox, 'String');
-    if ~(isa(eval([(boxString) ';']),'double'))
+    boxFunction = get(handles.timeBox, 'String');
+    if ~(isa(eval([(boxFunction) ';']),'double'))
         error('Must be a valid numerical expression.');
     end
-    testNum = eval([boxString ';']);
+    testNum = eval([boxFunction ';']);
     
     %if number is within domain
     if(testNum < get(handles.timeSlider, 'Min') || testNum > get(handles.timeSlider, 'Max'))
@@ -305,11 +305,11 @@ guidata(handles.figure1, handles);
 
 function handles = checkDivisionNumber(handles)
 try
-    boxString = get(handles.divisionBox, 'String');
-    if ~(isa(eval([(boxString) ';']),'double'))
+    boxFunction = get(handles.divisionBox, 'String');
+    if ~(isa(eval([(boxFunction) ';']),'double'))
         error('Must be a valid numerical expression.');
     end
-    testNum = eval([boxString ';']);
+    testNum = eval([boxFunction ';']);
     
     %if number is not a positive nonzero integer
     if(testNum <= 0 || mod(testNum, 1) ~= 0)
@@ -360,31 +360,28 @@ t = handles.tStart;
 % t = handles.t(1);
 
 %If corresponding text box has invalid code, reset to previous
-try
-    eval([get(handles.xFunction, 'String') ';'])
-    eval(['@(t) ' get(handles.xFunction, 'String') ';']);
-    handles.xString = get(handles.xFunction, 'String');
-catch err
-    set(handles.xFunction, 'String', handles.xString);
-    disp(['FUNCTION ERROR: ' err.message])
+variables = symvar(get(handles.xBox, 'String'));
+if isempty(variables) || (strcmp(variables{1},'t') && length(variables) == 1)
+    handles.xFunction = sym(get(handles.xBox, 'String'));
+else
+    set(handles.xBox, 'String', char(handles.xFunction));
+    error(['FUNCTION ERROR: The formula must only have t as the variable.']);
 end
 
-try
-    eval([get(handles.yFunction, 'String') ';'])
-    eval(['@(t) ' get(handles.yFunction, 'String') ';']);
-    handles.yString = get(handles.yFunction, 'String');
-catch err
-    set(handles.yFunction, 'String', handles.yString);
-    disp(['FUNCTION ERROR: ' err.message])
+variables = symvar(get(handles.yBox, 'String'));
+if isempty(variables) || (strcmp(variables{1},'t') && length(variables) == 1)
+    handles.yFunction = sym(get(handles.yBox, 'String'));
+else
+    set(handles.yBox, 'String', char(handles.yFunction));
+    error(['FUNCTION ERROR: The formula must only have t as the variable.']);
 end
 
-try
-    eval([get(handles.zFunction, 'String') ';'])
-    eval(['@(t) ' get(handles.zFunction, 'String') ';']);
-    handles.zString = get(handles.zFunction, 'String');
-catch err
-    disp(['FUNCTION ERROR: ' err.message])
-    set(handles.zFunction, 'String', handles.zString);
+variables = symvar(get(handles.zBox, 'String'));
+if isempty(variables) || (strcmp(variables{1},'t') && length(variables) == 1)
+    handles.zFunction = sym(get(handles.zBox, 'String'));
+else
+    set(handles.zBox, 'String', char(handles.zFunction));
+    error(['FUNCTION ERROR: The formula must only have t as the variable.']);
 end
 
 guidata(handles.figure1, handles);
@@ -392,17 +389,13 @@ guidata(handles.figure1, handles);
 function handles = setFunctions(handles)
 %Sets functions to text
 
-handles.r = eval(['@(t) {' handles.xString ',' handles.yString ',' handles.zString '}']);
+handles.curve = [handles.xFunction; handles.yFunction; handles.zFunction];
 
 guidata(handles.figure1, handles);
 
 function handles = createCurve(handles)
 t = linspace(handles.tStart, handles.tEnd, handles.divisions+1);
-handles.curve = handles.r(t);
-
-handles.x = cell2mat(handles.curve(1));
-handles.y = cell2mat(handles.curve(2));
-handles.z = cell2mat(handles.curve(3));
+handles.r = matlabFunction(handles.curve);
 
 setappdata(0, 'CurvePlotter3D', gcf);
 setappdata(gcf, 'Time', t);
@@ -410,11 +403,17 @@ setappdata(gcf, 'Time', t);
 guidata(handles.figure1, handles);
 
 function drawCurve(handles)
-plot3(handles.x, handles.y, handles.z);
+t = getCurve;
+curve = (handles.r(t));
+x = curve(1,:);
+y = curve(2,:);
+z = curve(3,:);
+disp(curve)
+plot3(x,y,z);
 guidata(handles.figure1, handles);
 
 function drawPoint(handles)
-point = cell2mat(handles.r(handles.tPoint));
+point = (handles.r(handles.tPoint));
 x = point(1);
 y = point(2);
 z = point(3);
@@ -423,7 +422,7 @@ guidata(handles.figure1, handles);
 
 function updateGraph(handles)
 drawCurve(handles);
-hold on;
+hold all;
 drawPoint(handles);
 hold off;
 guidata(handles.figure1, handles);
@@ -518,9 +517,9 @@ function revertButton_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-set(handles.xFunction, 'String', handles.xString);
-set(handles.yFunction, 'String', handles.yString);
-set(handles.zFunction, 'String', handles.zString);
+set(handles.xBox, 'String', handles.xFunction);
+set(handles.yBox, 'String', handles.yFunction);
+set(handles.zBox, 'String', handles.zFunction);
 set(handles.tStartBox, 'String', handles.tStart);
 set(handles.tEndBox, 'String', handles.tEnd);
 set(handles.divisionBox, 'String', handles.divisions);
@@ -603,3 +602,7 @@ else
     stop(handles.timer);
 end
 guidata(hfigure, handles);
+
+function t = getCurve
+CurvePlotter3D = getappdata(0, 'CurvePlotter3D');
+t = getappdata(CurvePlotter3D, 'Time');
