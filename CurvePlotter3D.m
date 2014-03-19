@@ -436,7 +436,10 @@ guidata(handles.figure1, handles);
 
 function drawCurve(handles)
 t = getCurve;
-curve = (handles.r(t));
+curve = zeros(3,length(t));
+for i = 1:length(t)
+    curve(:,i) = handles.r(t(i));
+end
 x = curve(1,:);
 y = curve(2,:);
 z = curve(3,:);
