@@ -65,9 +65,6 @@ handles.tStart = 0;
 handles.tEnd = 10;
 handles.tPoint = 0;
 handles.tRate = 1;
-handles.timer = timer('ExecutionMode', 'fixedRate', ...
-    'Period', 1/10, ...
-    'TimerFcn', @updateTimer);
 
 
 % Initialize Cursor
@@ -435,7 +432,7 @@ setappdata(gcf, 'Time', t);
 guidata(handles.figure1, handles);
 
 function drawCurve(handles)
-t = getCurve;
+t = getTimeVector;
 curve = zeros(3,length(t));
 for i = 1:length(t)
     curve(:,i) = handles.r(t(i));
@@ -445,6 +442,7 @@ y = curve(2,:);
 z = curve(3,:);
 
 plot3(x,y,z);
+
 guidata(handles.figure1, handles);
 
 function drawPoint(handles)
@@ -455,10 +453,54 @@ z = point(3);
 plot3(x,y,z,'o','Color','red');
 guidata(handles.figure1, handles);
 
+function drawMotionVectorsAt(time, handles)
+velocity = diff(handles.curve);
+acceleration = diff(velocity);
+
+v = matlabFunction(velocity);
+a = matlabFunction(acceleration);
+
+
+vVector = VectorFromTo(handles.r(time), v(time));
+aVector = VectorFromTo(handles.r(time), a(time));
+
+plot3(vVector(1,:), vVector(2,:), vVector(3,:), '-.r');
+plot3(aVector(1,:), aVector(2,:), aVector(3,:), '-.r');
+
+
+function drawUnitVectorsAt(time, handles)
+velocity = diff(handles.curve);
+Tangent = velocity/norm(velocity);
+Normal = diff(velocity)/norm(diff(velocity));
+
+T = matlabFunction(Tangent);
+N = matlabFunction(Normal);
+
+
+v(time)
+a(time)
+T = T(time)
+N = N(time)
+B = cross(T, N)
+
+tVector = VectorFromTo(handles.r(time), T);
+nVector = VectorFromTo(handles.r(time), N);
+bVector = VectorFromTo(handles.r(time), B);
+
+plot3(tVector(1,:), tVector(2,:), tVector(3,:), '--g');
+plot3(nVector(1,:), nVector(2,:), nVector(3,:), '--g');
+plot3(bVector(1,:), bVector(2,:), bVector(3,:), '--g');
+
+
+function points = VectorFromTo(point, vector)
+points = [point, point + vector];
+
+
 function updateGraph(handles)
 drawCurve(handles);
 hold all;
 drawPoint(handles);
+drawMotionVectorsAt(handles.tPoint, handles);
 hold off;
 guidata(handles.figure1, handles);
 
@@ -566,12 +608,17 @@ position = get(event_obj, 'Position');
 dataIndex = get(event_obj, 'DataIndex');
 CurvePlotter3D = getappdata(0, 'CurvePlotter3D');
 time = getappdata(CurvePlotter3D, 'Time');
-disp(time(dataIndex));
+disp(position);
 text = sprintf('X: %f\nY: %f\nZ: %f\nTime: %f',...
     position(1),...
     position(2),...
     position(3),...
     time(dataIndex));
+handles = guidata( ancestor(event_obj.Target, 'figure') );
+
+% hold on;
+% drawVectorsAt(time(dataIndex), handles);
+% hold off;
 
 
 % --- Executes when user attempts to close figure1.
@@ -580,7 +627,6 @@ function figure1_CloseRequestFcn(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-delete(handles.timer);
 
 % Hint: delete(hObject) closes the figure
 delete(hObject);
@@ -609,35 +655,6 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-% --- Executes on button press in playbackButton.
-function playbackButton_Callback(hObject, eventdata, handles)
-% hObject    handle to playbackButton (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-if strcmp(get(handles.timer, 'Running'), 'off')
-    start(handles.timer);
-    set(handles.playbackButton, 'String', 'Stop');
-else
-    stop(handles.timer);
-    set(handles.playbackButton, 'String', 'Play');
-end
-guidata(handles.figure1, handles);
-
-function updateTimer(object, eventdata)
-hfigure = getappdata(0, 'CurvePlotter3D');
-handles = guidata(hfigure);
-if(handles.tPoint + handles.tRate/10 <= handles.tEnd);
-    handles.tPoint = handles.tPoint + handles.tRate/10;
-    guidata(hfigure, handles);
-    handles = updateTPoint(handles);
-    guidata(hfigure, handles);
-    updateGraph(handles);
-    guidata(hfigure, handles);
-else
-    stop(handles.timer);
-end
-guidata(hfigure, handles);
-
-function t = getCurve
+function t = getTimeVector
 CurvePlotter3D = getappdata(0, 'CurvePlotter3D');
 t = getappdata(CurvePlotter3D, 'Time');
