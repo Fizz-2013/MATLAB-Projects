@@ -22,16 +22,16 @@ function varargout = CurvePlotter3D(varargin)
 
 % Edit the above text to modify the response to help CurvePlotter3D
 
-% Last Modified by GUIDE v2.5 24-Feb-2014 21:34:24
+% Last Modified by GUIDE v2.5 08-Apr-2014 08:34:20
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
 gui_State = struct('gui_Name',       mfilename, ...
-                   'gui_Singleton',  gui_Singleton, ...
-                   'gui_OpeningFcn', @CurvePlotter3D_OpeningFcn, ...
-                   'gui_OutputFcn',  @CurvePlotter3D_OutputFcn, ...
-                   'gui_LayoutFcn',  [] , ...
-                   'gui_Callback',   []);
+    'gui_Singleton',  gui_Singleton, ...
+    'gui_OpeningFcn', @CurvePlotter3D_OpeningFcn, ...
+    'gui_OutputFcn',  @CurvePlotter3D_OutputFcn, ...
+    'gui_LayoutFcn',  [] , ...
+    'gui_Callback',   []);
 if nargin && ischar(varargin{1})
     gui_State.gui_Callback = str2func(varargin{1});
 end
@@ -71,6 +71,11 @@ handles.tRate = 1;
 handles.cursorObj = datacursormode(handles.figure1);
 set(handles.cursorObj, 'UpdateFcn', @displayDataPoint);
 
+
+% Enable curve to be drawn by default
+set(handles.positionLabel, 'ForegroundColor', 'White');
+set(handles.positionLabel, 'Value', true);
+
 handles = updateFunctionButton_Callback(handles.updateFunctionButton, eventdata, handles);
 
 % Update handles structure
@@ -85,7 +90,7 @@ guidata(hObject, handles);
 
 
 % --- Outputs from this function are returned to the command line.
-function varargout = CurvePlotter3D_OutputFcn(hObject, eventdata, handles) 
+function varargout = CurvePlotter3D_OutputFcn(hObject, eventdata, handles)
 % varargout  cell array for returning output args (see VARARGOUT);
 % hObject    handle to figure
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -389,19 +394,23 @@ function handles = setFunctions(handles)
 
 handles.curve = [handles.xFunction; handles.yFunction; handles.zFunction];
 
+% Motion Vectors' text
+
+handles.velocity = diff(handles.curve);
+handles.acceleration = diff(handles.velocity);
+
 set(handles.positionText, 'String', ...
     ['< ' char(handles.xFunction) ', '...
     char(handles.yFunction) ', ' ...
     char(handles.zFunction) ' >']);
 set(handles.velocityText, 'String', ...
-    ['< ' char(diff(handles.xFunction)) ', '...
-    char(diff(handles.yFunction)) ', ' ...
-    char(diff(handles.zFunction)) ' >']);
+    ['< ' char(handles.velocity(1)) ', '...
+    char(handles.velocity(2)) ', ' ...
+    char(handles.velocity(3)) ' >']);
 set(handles.accelerationText, 'String', ...
-    ['< ' char(diff(handles.xFunction, 2)) ', '...
-    char(diff(handles.yFunction, 2)) ', ' ...
-    char(diff(handles.zFunction, 2)) ' >']);
-
+    ['< ' char(handles.acceleration(1)) ', '...
+    char(handles.acceleration(2)) ', ' ...
+    char(handles.acceleration(3)) ' >']);
 
 help = sprintf('i: %s\nj: %s\nk: %s', ...
     char(handles.xFunction), ...
@@ -418,6 +427,42 @@ help = sprintf('i: %s\nj: %s\nk: %s', ...
     char(diff(handles.yFunction, 2)), ...
     char(diff(handles.zFunction, 2)));
 set(handles.accelerationText, 'ToolTipString', help);
+
+
+% Unit Vectors' text
+
+handles.Tangent = handles.velocity/norm(handles.velocity);
+handles.Normal = diff(handles.Tangent)/norm(diff(handles.Tangent));
+handles.Binormal = cross(handles.Tangent, handles.Normal);
+
+set(handles.tangentText, 'String', ...
+    ['< ' char(handles.Tangent(1)) ', '...
+    char(handles.Tangent(2)) ', ' ...
+    char(handles.Tangent(3)) ' >']);
+set(handles.normalText, 'String', ...
+    ['< ' char(handles.Normal(1)) ', '...
+    char(handles.Normal(2)) ', ' ...
+    char(handles.Normal(3)) ' >']);
+set(handles.binormalText, 'String', ...
+    ['< ' char(handles.Binormal(1)) ', '...
+    char(handles.Binormal(2)) ', ' ...
+    char(handles.Binormal(3)) ' >']);
+
+help = sprintf('i: %s\nj: %s\nk: %s', ...
+    char(handles.Tangent(1)), ...
+    char(handles.Tangent(2)), ...
+    char(handles.Tangent(3)));
+set(handles.tangentText, 'ToolTipString', help);
+help = sprintf('i: %s\nj: %s\nk: %s', ...
+    char(handles.Normal(1)), ...
+    char(handles.Normal(2)), ...
+    char(handles.Normal(3)));
+set(handles.normalText, 'ToolTipString', help);
+help = sprintf('i: %s\nj: %s\nk: %s', ...
+    char(handles.Binormal(1)), ...
+    char(handles.Binormal(2)), ...
+    char(handles.Binormal(3)));
+set(handles.binormalText, 'ToolTipString', help);
 
 
 guidata(handles.figure1, handles);
@@ -454,42 +499,45 @@ plot3(x,y,z,'o','Color','red');
 guidata(handles.figure1, handles);
 
 function drawMotionVectorsAt(time, handles)
-velocity = diff(handles.curve);
-acceleration = diff(velocity);
-
-v = matlabFunction(velocity);
-a = matlabFunction(acceleration);
+v = matlabFunction(handles.velocity);
+a = matlabFunction(handles.acceleration);
 
 
 vVector = VectorFromTo(handles.r(time), v(time));
 aVector = VectorFromTo(handles.r(time), a(time));
 
-plot3(vVector(1,:), vVector(2,:), vVector(3,:), '-.r');
-plot3(aVector(1,:), aVector(2,:), aVector(3,:), '-.r');
+if(get(handles.velocityLabel, 'Value'))
+    plot3(vVector(1,:), vVector(2,:), vVector(3,:), '-.r');
+end
+
+if(get(handles.accelerationLabel, 'Value'))
+    plot3(aVector(1,:), aVector(2,:), aVector(3,:), '-.r');
+end
 
 
 function drawUnitVectorsAt(time, handles)
-velocity = diff(handles.curve);
-Tangent = velocity/norm(velocity);
-Normal = diff(velocity)/norm(diff(velocity));
 
-T = matlabFunction(Tangent);
-N = matlabFunction(Normal);
+T = matlabFunction(handles.Tangent);
+N = matlabFunction(handles.Normal);
+B = matlabFunction(handles.Binormal);
 
-
-v(time)
-a(time)
-T = T(time)
-N = N(time)
-B = cross(T, N)
+T = T(time);
+N = N(time);
+B = B(time);
 
 tVector = VectorFromTo(handles.r(time), T);
 nVector = VectorFromTo(handles.r(time), N);
 bVector = VectorFromTo(handles.r(time), B);
 
-plot3(tVector(1,:), tVector(2,:), tVector(3,:), '--g');
-plot3(nVector(1,:), nVector(2,:), nVector(3,:), '--g');
-plot3(bVector(1,:), bVector(2,:), bVector(3,:), '--g');
+if(get(handles.tangentLabel, 'Value'))
+    plot3(tVector(1,:), tVector(2,:), tVector(3,:), '--g');
+end
+if(get(handles.normalLabel, 'Value'))
+    plot3(nVector(1,:), nVector(2,:), nVector(3,:), '--g');
+end
+if(get(handles.binormalLabel, 'Value'))
+    plot3(bVector(1,:), bVector(2,:), bVector(3,:), '--g');
+end
 
 
 function points = VectorFromTo(point, vector)
@@ -497,10 +545,15 @@ points = [point, point + vector];
 
 
 function updateGraph(handles)
-drawCurve(handles);
+cla(handles.bigGraph);
+% If position display is enabled
+if(get(handles.positionLabel,'Value'))
+    drawCurve(handles);
+end
 hold all;
 drawPoint(handles);
 drawMotionVectorsAt(handles.tPoint, handles);
+drawUnitVectorsAt(handles.tPoint, handles);
 hold off;
 guidata(handles.figure1, handles);
 
@@ -632,29 +685,93 @@ function figure1_CloseRequestFcn(hObject, eventdata, handles)
 delete(hObject);
 
 
-
-function rateText_Callback(hObject, eventdata, handles)
-% hObject    handle to rateText (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of rateText as text
-%        str2double(get(hObject,'String')) returns contents of rateText as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function rateText_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to rateText (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
 function t = getTimeVector
 CurvePlotter3D = getappdata(0, 'CurvePlotter3D');
 t = getappdata(CurvePlotter3D, 'Time');
+
+
+% --- Executes on button press in positionLabel.
+function positionLabel_Callback(hObject, eventdata, handles)
+% hObject    handle to positionLabel (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of positionLabel
+updateGraph(handles);
+if(get(hObject, 'Value'))
+    set(hObject, 'ForegroundColor', 'White');
+else
+    set(hObject, 'ForegroundColor', 'Black');
+end
+
+% --- Executes on button press in velocityLabel.
+function velocityLabel_Callback(hObject, eventdata, handles)
+% hObject    handle to velocityLabel (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of velocityLabel
+updateGraph(handles);
+if(get(hObject, 'Value'))
+    set(hObject, 'ForegroundColor', 'White');
+else
+    set(hObject, 'ForegroundColor', 'Black');
+end
+
+
+% --- Executes on button press in accelerationLabel.
+function accelerationLabel_Callback(hObject, eventdata, handles)
+% hObject    handle to accelerationLabel (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of accelerationLabel
+updateGraph(handles);
+if(get(hObject, 'Value'))
+    set(hObject, 'ForegroundColor', 'White');
+else
+    set(hObject, 'ForegroundColor', 'Black');
+end
+
+
+% --- Executes on button press in tangentLabel.
+function tangentLabel_Callback(hObject, eventdata, handles)
+% hObject    handle to tangentLabel (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of tangentLabel
+updateGraph(handles);
+if(get(hObject, 'Value'))
+    set(hObject, 'ForegroundColor', 'White');
+else
+    set(hObject, 'ForegroundColor', 'Black');
+end
+
+% --- Executes on button press in normalLabel.
+function normalLabel_Callback(hObject, eventdata, handles)
+% hObject    handle to normalLabel (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of normalLabel
+updateGraph(handles);
+if(get(hObject, 'Value'))
+    set(hObject, 'ForegroundColor', 'White');
+else
+    set(hObject, 'ForegroundColor', 'Black');
+end
+
+% --- Executes on button press in binormalLabel.
+function binormalLabel_Callback(hObject, eventdata, handles)
+% hObject    handle to binormalLabel (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of binormalLabel
+updateGraph(handles);
+if(get(hObject, 'Value'))
+    set(hObject, 'ForegroundColor', 'White');
+else
+    set(hObject, 'ForegroundColor', 'Black');
+end
