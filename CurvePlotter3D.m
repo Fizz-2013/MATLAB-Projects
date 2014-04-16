@@ -390,7 +390,8 @@ end
 guidata(handles.figure1, handles);
 
 function handles = setFunctions(handles)
-%Sets functions to text
+
+% Sets functions to text
 
 handles.curve = [handles.xFunction; handles.yFunction; handles.zFunction];
 
@@ -429,42 +430,6 @@ help = sprintf('i: %s\nj: %s\nk: %s', ...
 set(handles.accelerationText, 'ToolTipString', help);
 
 
-% Unit Vectors' text
-
-handles.Tangent = handles.velocity/norm(handles.velocity);
-handles.Normal = diff(handles.Tangent)/norm(diff(handles.Tangent));
-handles.Binormal = cross(handles.Tangent, handles.Normal);
-
-set(handles.tangentText, 'String', ...
-    ['< ' char(handles.Tangent(1)) ', '...
-    char(handles.Tangent(2)) ', ' ...
-    char(handles.Tangent(3)) ' >']);
-set(handles.normalText, 'String', ...
-    ['< ' char(handles.Normal(1)) ', '...
-    char(handles.Normal(2)) ', ' ...
-    char(handles.Normal(3)) ' >']);
-set(handles.binormalText, 'String', ...
-    ['< ' char(handles.Binormal(1)) ', '...
-    char(handles.Binormal(2)) ', ' ...
-    char(handles.Binormal(3)) ' >']);
-
-help = sprintf('i: %s\nj: %s\nk: %s', ...
-    char(handles.Tangent(1)), ...
-    char(handles.Tangent(2)), ...
-    char(handles.Tangent(3)));
-set(handles.tangentText, 'ToolTipString', help);
-help = sprintf('i: %s\nj: %s\nk: %s', ...
-    char(handles.Normal(1)), ...
-    char(handles.Normal(2)), ...
-    char(handles.Normal(3)));
-set(handles.normalText, 'ToolTipString', help);
-help = sprintf('i: %s\nj: %s\nk: %s', ...
-    char(handles.Binormal(1)), ...
-    char(handles.Binormal(2)), ...
-    char(handles.Binormal(3)));
-set(handles.binormalText, 'ToolTipString', help);
-
-
 guidata(handles.figure1, handles);
 
 function handles = createCurve(handles)
@@ -496,6 +461,7 @@ x = point(1);
 y = point(2);
 z = point(3);
 plot3(x,y,z,'o','Color','red');
+
 guidata(handles.figure1, handles);
 
 function drawMotionVectorsAt(time, handles)
@@ -514,16 +480,22 @@ if(get(handles.accelerationLabel, 'Value'))
     plot3(aVector(1,:), aVector(2,:), aVector(3,:), '-.r');
 end
 
+% Curvature
+handles.curvature = norm(cross(v(time),a(time)))/(norm(v(time)))^3;
+
+set(handles.curvatureText, 'String', (handles.curvature));
+
 
 function drawUnitVectorsAt(time, handles)
+v = matlabFunction(handles.velocity);
+a = matlabFunction(handles.acceleration);
 
-T = matlabFunction(handles.Tangent);
-N = matlabFunction(handles.Normal);
-B = matlabFunction(handles.Binormal);
-
-T = T(time);
-N = N(time);
-B = B(time);
+T = v(time);
+T = T/norm(T);
+% perpendicular component of acceleration
+N = a(time) - dot(a(time),T);
+N = N/norm(N);
+B = cross(T, N);
 
 tVector = VectorFromTo(handles.r(time), T);
 nVector = VectorFromTo(handles.r(time), N);
