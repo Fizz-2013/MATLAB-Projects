@@ -44,6 +44,7 @@ end
 % End initialization code - DO NOT EDIT
 
 
+
 % --- Executes just before CurvePlotter3D is made visible.
 function CurvePlotter3D_OpeningFcn(hObject, eventdata, handles, varargin)
 % This function has no output args, see OutputFcn.
@@ -86,6 +87,7 @@ guidata(hObject, handles);
 
 % UIWAIT makes CurvePlotter3D wait for user response (see UIRESUME)
 % uiwait(handles.figure1);
+
 
 
 
@@ -233,6 +235,7 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 
+
 % --- Executes on slider movement.
 function timeSlider_Callback(hObject, eventdata, handles)
 % hObject    handle to timeSlider (see GCBO)
@@ -243,6 +246,9 @@ function timeSlider_Callback(hObject, eventdata, handles)
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
 handles.tPoint = get(hObject, 'Value');
 set(handles.timeBox, 'String', handles.tPoint);
+
+calculateArcLength(handles);
+
 updateGraph(handles);
 guidata(handles.figure1, handles);
 
@@ -275,6 +281,9 @@ end
 handles.tPoint = eval([get(handles.timeBox, 'String') ';']);
 set(handles.timeBox, 'String', handles.tPoint);
 set(handles.timeSlider, 'Value', handles.tPoint);
+
+calculateArcLength(handles);
+
 updateGraph(handles);
 
 guidata(handles.figure1, handles);
@@ -297,11 +306,14 @@ updateGraph(handles);
 
 guidata(handles.figure1, handles);
 
+
 function handles = updateTPoint(handles)
 set(handles.timeBox, 'String', handles.tPoint);
 set(handles.timeSlider, 'Min', handles.tStart);
 set(handles.timeSlider, 'Max', handles.tEnd);
 set(handles.timeSlider, 'Value', handles.tPoint);
+
+calculateArcLength(handles);
 
 guidata(handles.figure1, handles);
 
@@ -429,8 +441,40 @@ help = sprintf('i: %s\nj: %s\nk: %s', ...
     char(diff(handles.zFunction, 2)));
 set(handles.accelerationText, 'ToolTipString', help);
 
+if(curveIsLine(handles))
+    set(handles.accelerationLabel, 'Enable', 'off');
+    set(handles.normalLabel, 'Enable', 'off');
+    set(handles.binormalLabel, 'Enable', 'off');
+else
+    set(handles.accelerationLabel, 'Enable', 'on');
+    set(handles.normalLabel, 'Enable', 'on');
+    set(handles.binormalLabel, 'Enable', 'on');
+end
 
 guidata(handles.figure1, handles);
+
+
+function handles = calculateCurveLength(handles)
+
+% Calculate curve length
+handles.speed = matlabFunction(norm(handles.velocity));
+
+if(curveIsLine(handles))
+    length = norm(handles.r(handles.tEnd) - handles.r(handles.tStart));
+else
+    length = integral(handles.speed, handles.tStart, handles.tEnd);
+end
+
+set(handles.lengthBox, 'String', length);
+
+function arcLength = calculateArcLength(handles)
+if(curveIsLine(handles))
+    arcLength = norm(handles.r(handles.tPoint) - handles.r(handles.tStart));
+else
+    arcLength = integral(handles.speed, handles.tStart, handles.tPoint);
+end
+set(handles.arcLengthText, 'String', arcLength);
+
 
 function handles = createCurve(handles)
 t = linspace(handles.tStart, handles.tEnd, handles.divisions+1);
@@ -438,6 +482,8 @@ handles.r = matlabFunction(handles.curve);
 
 setappdata(0, 'CurvePlotter3D', gcf);
 setappdata(gcf, 'Time', t);
+
+handles = calculateCurveLength(handles);
 
 guidata(handles.figure1, handles);
 
@@ -465,23 +511,41 @@ plot3(x,y,z,'o','Color','red');
 guidata(handles.figure1, handles);
 
 function drawMotionVectorsAt(time, handles)
-v = matlabFunction(handles.velocity);
-a = matlabFunction(handles.acceleration);
 
 
-vVector = VectorFromTo(handles.r(time), v(time));
-aVector = VectorFromTo(handles.r(time), a(time));
+if(curveIsLine(handles))
+    handles.curvature = 0;
+    
+    v = matlabFunction(handles.velocity);
+    vVector = VectorExtendingFrom(handles.r(time), v());
+    if(get(handles.velocityLabel, 'Value'))
+        plot3(vVector(1,:), vVector(2,:), vVector(3,:), '-.r');
+    end
+else
+    v = matlabFunction(handles.velocity);
+    vVector = VectorExtendingFrom(handles.r(time), v(time));
+    if(get(handles.velocityLabel, 'Value'))
+        plot3(vVector(1,:), vVector(2,:), vVector(3,:), '-.r');
+    end
 
-if(get(handles.velocityLabel, 'Value'))
-    plot3(vVector(1,:), vVector(2,:), vVector(3,:), '-.r');
+    a = matlabFunction(handles.acceleration);
+    
+    if(isempty(symvar(handles.acceleration)))
+        aVector = VectorExtendingFrom(handles.r(time), a());
+        
+        % Curvature
+        handles.curvature = norm(cross(v(time),a()))/(norm(v(time)))^3;
+    else
+        aVector = VectorExtendingFrom(handles.r(time), a(time));
+        % Curvature
+        handles.curvature = norm(cross(v(time),a(time)))/(norm(v(time)))^3;
+    end
+    if(get(handles.accelerationLabel, 'Value'))
+        plot3(aVector(1,:), aVector(2,:), aVector(3,:), '-.r');
+    end
+    
+    
 end
-
-if(get(handles.accelerationLabel, 'Value'))
-    plot3(aVector(1,:), aVector(2,:), aVector(3,:), '-.r');
-end
-
-% Curvature
-handles.curvature = norm(cross(v(time),a(time)))/(norm(v(time)))^3;
 
 set(handles.curvatureText, 'String', (handles.curvature));
 
@@ -490,29 +554,41 @@ function drawUnitVectorsAt(time, handles)
 v = matlabFunction(handles.velocity);
 a = matlabFunction(handles.acceleration);
 
-T = v(time);
-T = T/norm(T);
-% perpendicular component of acceleration
-N = a(time) - dot(a(time),T);
-N = N/norm(N);
-B = cross(T, N);
+if(curveIsLine(handles))
+    T = v();
+    T = T/norm(T);
+else
+    T = v(time);
+    T = T/norm(T);
+    % perpendicular component of acceleration
+    
+    if(isempty(symvar(handles.acceleration)))
+        N = a() - dot(a(),T);
+    else
+        N = a(time) - dot(a(time),T);
+    end
+    N = N/norm(N);
+    B = cross(T, N);
+    nVector = VectorExtendingFrom(handles.r(time), N);
+    bVector = VectorExtendingFrom(handles.r(time), B);
+    
+    if(get(handles.normalLabel, 'Value'))
+        plot3(nVector(1,:), nVector(2,:), nVector(3,:), '--g');
+    end
+    if(get(handles.binormalLabel, 'Value'))
+        plot3(bVector(1,:), bVector(2,:), bVector(3,:), '--g');
+    end
+end
 
-tVector = VectorFromTo(handles.r(time), T);
-nVector = VectorFromTo(handles.r(time), N);
-bVector = VectorFromTo(handles.r(time), B);
+tVector = VectorExtendingFrom(handles.r(time), T);
+
 
 if(get(handles.tangentLabel, 'Value'))
     plot3(tVector(1,:), tVector(2,:), tVector(3,:), '--g');
 end
-if(get(handles.normalLabel, 'Value'))
-    plot3(nVector(1,:), nVector(2,:), nVector(3,:), '--g');
-end
-if(get(handles.binormalLabel, 'Value'))
-    plot3(bVector(1,:), bVector(2,:), bVector(3,:), '--g');
-end
 
 
-function points = VectorFromTo(point, vector)
+function points = VectorExtendingFrom(point, vector)
 points = [point, point + vector];
 
 
@@ -528,6 +604,12 @@ drawMotionVectorsAt(handles.tPoint, handles);
 drawUnitVectorsAt(handles.tPoint, handles);
 hold off;
 guidata(handles.figure1, handles);
+
+
+% Checks to see if the curve is a line
+function answer = curveIsLine(handles)
+answer = all(handles.acceleration == 0);
+
 
 function tStartBox_Callback(hObject, eventdata, handles)
 % hObject    handle to tStartBox (see GCBO)
@@ -631,15 +713,13 @@ function text = displayDataPoint(obj, event_obj)
 % Customizes text of data tip
 position = get(event_obj, 'Position');
 dataIndex = get(event_obj, 'DataIndex');
-CurvePlotter3D = getappdata(0, 'CurvePlotter3D');
-time = getappdata(CurvePlotter3D, 'Time');
+time = getTimeVector;
 disp(position);
 text = sprintf('X: %f\nY: %f\nZ: %f\nTime: %f',...
     position(1),...
     position(2),...
     position(3),...
     time(dataIndex));
-handles = guidata( ancestor(event_obj.Target, 'figure') );
 
 % hold on;
 % drawVectorsAt(time(dataIndex), handles);
