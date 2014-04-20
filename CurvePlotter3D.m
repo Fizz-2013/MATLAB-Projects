@@ -22,7 +22,7 @@ function varargout = CurvePlotter3D(varargin)
 
 % Edit the above text to modify the response to help CurvePlotter3D
 
-% Last Modified by GUIDE v2.5 08-Apr-2014 08:34:20
+% Last Modified by GUIDE v2.5 19-Apr-2014 17:48:10
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -497,7 +497,7 @@ x = curve(1,:);
 y = curve(2,:);
 z = curve(3,:);
 
-plot3(x,y,z);
+plot3(handles.bigGraph, x,y,z);
 
 guidata(handles.figure1, handles);
 
@@ -506,7 +506,7 @@ point = (handles.r(handles.tPoint));
 x = point(1);
 y = point(2);
 z = point(3);
-plot3(x,y,z,'o','Color','red');
+plot3(handles.bigGraph, x,y,z,'o','Color','red');
 
 guidata(handles.figure1, handles);
 
@@ -519,13 +519,13 @@ if(curveIsLine(handles))
     v = matlabFunction(handles.velocity);
     vVector = VectorExtendingFrom(handles.r(time), v());
     if(get(handles.velocityLabel, 'Value'))
-        plot3(vVector(1,:), vVector(2,:), vVector(3,:), '-.r');
+        plot3(handles.bigGraph, vVector(1,:), vVector(2,:), vVector(3,:), '-.r');
     end
 else
     v = matlabFunction(handles.velocity);
     vVector = VectorExtendingFrom(handles.r(time), v(time));
     if(get(handles.velocityLabel, 'Value'))
-        plot3(vVector(1,:), vVector(2,:), vVector(3,:), '-.r');
+        plot3(handles.bigGraph, vVector(1,:), vVector(2,:), vVector(3,:), '-.r');
     end
 
     a = matlabFunction(handles.acceleration);
@@ -541,7 +541,7 @@ else
         handles.curvature = norm(cross(v(time),a(time)))/(norm(v(time)))^3;
     end
     if(get(handles.accelerationLabel, 'Value'))
-        plot3(aVector(1,:), aVector(2,:), aVector(3,:), '-.r');
+        plot3(handles.bigGraph, aVector(1,:), aVector(2,:), aVector(3,:), '-.r');
     end
     
     
@@ -573,10 +573,10 @@ else
     bVector = VectorExtendingFrom(handles.r(time), B);
     
     if(get(handles.normalLabel, 'Value'))
-        plot3(nVector(1,:), nVector(2,:), nVector(3,:), '--g');
+        plot3(handles.bigGraph, nVector(1,:), nVector(2,:), nVector(3,:), '--g');
     end
     if(get(handles.binormalLabel, 'Value'))
-        plot3(bVector(1,:), bVector(2,:), bVector(3,:), '--g');
+        plot3(handles.bigGraph, bVector(1,:), bVector(2,:), bVector(3,:), '--g');
     end
 end
 
@@ -584,7 +584,7 @@ tVector = VectorExtendingFrom(handles.r(time), T);
 
 
 if(get(handles.tangentLabel, 'Value'))
-    plot3(tVector(1,:), tVector(2,:), tVector(3,:), '--g');
+    plot3(handles.bigGraph, tVector(1,:), tVector(2,:), tVector(3,:), '--g');
 end
 
 
@@ -598,11 +598,11 @@ cla(handles.bigGraph);
 if(get(handles.positionLabel,'Value'))
     drawCurve(handles);
 end
-hold all;
+set(handles.bigGraph, 'NextPlot', 'add');
 drawPoint(handles);
 drawMotionVectorsAt(handles.tPoint, handles);
 drawUnitVectorsAt(handles.tPoint, handles);
-hold off;
+set(handles.bigGraph, 'NextPlot', 'replace');
 guidata(handles.figure1, handles);
 
 
