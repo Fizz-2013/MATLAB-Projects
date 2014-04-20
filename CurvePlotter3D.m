@@ -22,7 +22,7 @@ function varargout = CurvePlotter3D(varargin)
 
 % Edit the above text to modify the response to help CurvePlotter3D
 
-% Last Modified by GUIDE v2.5 19-Apr-2014 17:48:10
+% Last Modified by GUIDE v2.5 20-Apr-2014 15:22:39
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -71,6 +71,16 @@ handles.tRate = 1;
 % Initialize Cursor
 handles.cursorObj = datacursormode(handles.figure1);
 set(handles.cursorObj, 'UpdateFcn', @displayDataPoint);
+
+% Creating Integral Texts
+handles.scalarIntLabel = uibutton(handles.scalarIntLabel, ...
+    'Interpreter', 'LaTex', ...
+    'String', '$$\int\limits_C \! f(x,y,z) \, dS = $$', ...
+    'FontSize', 14);
+handles.vectorIntLabel = uibutton(handles.vectorIntLabel, ...
+    'Interpreter', 'LaTex', ...
+    'String', '$$\int\limits_C \! \vec{F}(x,y,z) \cdot  \, d \vec{r} = $$', ...
+    'FontSize', 14);
 
 
 % Enable curve to be drawn by default
@@ -527,7 +537,7 @@ else
     if(get(handles.velocityLabel, 'Value'))
         plot3(handles.bigGraph, vVector(1,:), vVector(2,:), vVector(3,:), '-.r');
     end
-
+    
     a = matlabFunction(handles.acceleration);
     
     if(isempty(symvar(handles.acceleration)))
@@ -609,6 +619,10 @@ guidata(handles.figure1, handles);
 % Checks to see if the curve is a line
 function answer = curveIsLine(handles)
 answer = all(handles.acceleration == 0);
+
+% A curve is smooth if its second derivative is continuous and non-zero
+function answer = curveIsSmooth(handles)
+answer = ~(all(handles.velocity == 0) || any(handles.velocity == Inf));
 
 
 function tStartBox_Callback(hObject, eventdata, handles)
@@ -826,4 +840,262 @@ if(get(hObject, 'Value'))
     set(hObject, 'ForegroundColor', 'White');
 else
     set(hObject, 'ForegroundColor', 'Black');
+end
+
+
+% --- Executes on selection change in integralType.
+function integralType_Callback(hObject, eventdata, handles)
+% hObject    handle to integralType (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: contents = cellstr(get(hObject,'String')) returns integralType contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from integralType
+
+% If first index, show scalar Function panel
+if(get(hObject, 'Value') == 1)
+    set(handles.scalarFunctionPanel, 'Visible', 'on');
+    set(handles.vectorFieldPanel, 'Visible', 'off');
+else
+    set(handles.scalarFunctionPanel, 'Visible', 'off');
+    set(handles.vectorFieldPanel, 'Visible', 'on');
+end
+
+% --- Executes during object creation, after setting all properties.
+function integralType_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to integralType (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: popupmenu controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function scalarFuncText_Callback(hObject, eventdata, handles)
+% hObject    handle to scalarFuncText (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of scalarFuncText as text
+%        str2double(get(hObject,'String')) returns contents of scalarFuncText as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function scalarFuncText_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to scalarFuncText (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in scalarIntSolve.
+function scalarIntSolve_Callback(hObject, eventdata, handles)
+% hObject    handle to scalarIntSolve (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+t = sym('t');
+
+%If corresponding text box has invalid code, reset to previous
+funcText = get(handles.scalarFuncText, 'String');
+if(isempty(funcText))
+    set(handles.scalarFuncText, 'String', 0);
+    set(handles.scalarIntAns, 'String', 0);
+    return;
+end
+
+variables = symvar(funcText);
+if ~isempty(variables)
+    x = handles.xFunction;
+    y = handles.yFunction;
+    z = handles.zFunction;
+    
+    % Check for valid variables, if valid, replace with the function string
+    for(i=1:length(variables))
+        variable = variables{i};
+        
+        if ~strcmp(variable, 'x') ...
+                && ~strcmp(variable, 'y') ...
+                && ~strcmp(variable, 'z')
+            
+            error(['FUNCTION ERROR: ' ...
+                variable ' is not a valid variable. ' ...
+                'The formula can only have x, y, z or constants.']);
+        end
+    end
+    
+end
+
+scalarFunction = eval(funcText) * norm(handles.velocity);
+
+if(scalarFunction ~= 0)
+    % Solve line integral numerically
+    value = integral(matlabFunction(scalarFunction, 'vars', 't'), ...
+        handles.tStart, handles.tEnd, ...
+        'ArrayValued', true);
+    
+    % Solving equation, set busy
+    exactAnswer = int(scalarFunction, t, handles.tStart, handles.tEnd);
+    
+else
+    value = 0;
+    exactAnswer = 0;
+end
+
+set(handles.scalarIntAns, 'String', value);
+set(handles.scalarIntAns, 'ToolTipString', ...
+    ['Exact Answer: ' char(exactAnswer)]);
+
+
+
+guidata(handles.figure1, handles);
+
+
+
+function iCompText_Callback(hObject, eventdata, handles)
+% hObject    handle to iCompText (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of iCompText as text
+%        str2double(get(hObject,'String')) returns contents of iCompText as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function iCompText_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to iCompText (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in vectorIntSolve.
+function vectorIntSolve_Callback(hObject, eventdata, handles)
+% hObject    handle to vectorIntSolve (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+t = sym('t');
+x = handles.xFunction;
+y = handles.yFunction;
+z = handles.zFunction;
+
+componentHandles = {handles.iCompText; handles.jCompText; handles.kCompText};
+
+
+for i = 1:3
+%If corresponding text box has invalid code, reset to previous
+funcText = get(componentHandles{i}, 'String');
+
+if(isempty(funcText))
+    set(componentHandles{i}, 'String', 0);
+    continue;
+end
+
+variables = symvar(funcText);
+if ~isempty(variables)
+
+    
+    % Check for valid variables, if valid, replace with the function string
+    for(i=1:length(variables))
+        variable = variables{i};
+        
+        if ~strcmp(variable, 'x') ...
+                && ~strcmp(variable, 'y') ...
+                && ~strcmp(variable, 'z')
+            
+            error(['FUNCTION ERROR: ' ...
+                variable ' is not a valid variable. ' ...
+                'The formula can only have x, y, z or constants.']);
+        end
+    end
+    
+end
+
+end
+
+vector = ['[ ' get(handles.iCompText, 'String') ';' ...
+    get(handles.jCompText, 'String') ';' ...
+    get(handles.kCompText, 'String') ']'];
+vectorFunction = dot(eval(vector),handles.velocity);
+
+if(vectorFunction ~= 0)
+    % Solve line integral numerically
+    value = integral(matlabFunction(vectorFunction, 'vars', 't'), ...
+        handles.tStart, handles.tEnd, ...
+        'ArrayValued', true);
+    
+    % Solving equation, set busy
+    exactAnswer = int(vectorFunction, t, handles.tStart, handles.tEnd);
+    
+else
+    value = 0;
+    exactAnswer = 0;
+end
+
+set(handles.vectorIntAns, 'String', value);
+set(handles.vectorIntAns, 'ToolTipString', ...
+    ['Exact Answer: ' char(exactAnswer)]);
+
+
+
+guidata(handles.figure1, handles);
+
+
+function jCompText_Callback(hObject, eventdata, handles)
+% hObject    handle to jCompText (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of jCompText as text
+%        str2double(get(hObject,'String')) returns contents of jCompText as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function jCompText_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to jCompText (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function kCompText_Callback(hObject, eventdata, handles)
+% hObject    handle to kCompText (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of kCompText as text
+%        str2double(get(hObject,'String')) returns contents of kCompText as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function kCompText_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to kCompText (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
 end
