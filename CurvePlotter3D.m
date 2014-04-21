@@ -22,7 +22,7 @@ function varargout = CurvePlotter3D(varargin)
 
 % Edit the above text to modify the response to help CurvePlotter3D
 
-% Last Modified by GUIDE v2.5 21-Apr-2014 09:55:55
+% Last Modified by GUIDE v2.5 21-Apr-2014 11:27:07
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -83,26 +83,64 @@ handles.vectorIntLabel = uibutton(handles.vectorIntLabel, ...
     'FontSize', 14);
 
 
-% Enable curve to be drawn by default
-set(handles.positionLabel, 'ForegroundColor', 'White');
-set(handles.positionLabel, 'Value', true);
 
-handles = updateFunctionButton_Callback(handles.updateFunctionButton, eventdata, handles);
+% handles = updateFunctionButton_Callback(handles.updateFunctionButton, eventdata, handles);
 
-initialPlot(handles);
+handles = initialPlot(handles);
 
 % Update handles structure
 guidata(hObject, handles);
 
 
-function initialPlot(handles)
+function handles = initialPlot(handles)
+handles = checkDivisionNumber(handles);
+handles = checkCurveDomain(handles);
+handles = checkFunctionText(handles);
+handles = setFunctions(handles);
+handles = createCurve(handles);
+
+% Plot Point Initially
 handles.point = (handles.r(handles.tPoint));
 handles.pointPlot = plot3(handles.bigGraph, handles.point(1), ...
     handles.point(2),  handles.point(3),'o','Color','red');
-set(handles.pointPlot, 'XDataSource', 'handles.point(1)');
-set(handles.pointPlot, 'XDataSource', 'handles.point(2)');
-set(handles.pointPlot, 'XDataSource', 'handles.point(3)');
 
+set(handles.bigGraph, 'NextPlot', 'add');
+
+% Plot Curve Initially
+t = getTimeVector;
+curve = zeros(3,length(t));
+for i = 1:length(t)
+    curve(:,i) = handles.r(t(i));
+end
+x = curve(1,:);
+y = curve(2,:);
+z = curve(3,:);
+handles.curvePlot = plot3(handles.bigGraph, x, y, z);
+
+
+% Plot Vectors Initially (using dummy values)
+handles.positionPlot = plot3(handles.bigGraph, ...
+    0:0.5:1, 0:0.5:1, 0:0.5:1, '-.r');
+handles.velocityPlot = plot3(handles.bigGraph, ...
+    0:0.5:1, 0:0.5:1, 0:0.5:1, '-.r');
+handles.accelerationPlot = plot3(handles.bigGraph, ...
+    0:0.5:1, 0:0.5:1, 0:0.5:1, '-.r');
+
+handles.tangentPlot = plot3(handles.bigGraph, ...
+    0:0.5:1, 0:0.5:1, 0:0.5:1, '--g');
+handles.normalPlot = plot3(handles.bigGraph, ...
+    0:0.5:1, 0:0.5:1, 0:0.5:1, '--g');
+handles.binormalPlot = plot3(handles.bigGraph, ...
+    0:0.5:1, 0:0.5:1, 0:0.5:1, '--g');
+
+set(handles.positionPlot, 'Visible', 'off');
+set(handles.velocityPlot, 'Visible', 'off');
+set(handles.accelerationPlot, 'Visible', 'off');
+set(handles.tangentPlot, 'Visible', 'off');
+set(handles.normalPlot, 'Visible', 'off');
+set(handles.binormalPlot, 'Visible', 'off');
+
+guidata(handles.figure1, handles);
 
 
 
@@ -480,22 +518,30 @@ x = curve(1,:);
 y = curve(2,:);
 z = curve(3,:);
 
-plot3(handles.bigGraph, x,y,z);
+set(handles.curvePlot, 'XData', x, 'YData', y, 'ZData', z);
+
+% plot3(handles.bigGraph, x,y,z);
 
 guidata(handles.figure1, handles);
 
 function drawPoint(handles)
 handles.point = (handles.r(handles.tPoint));
-% x = handles.point(1);
-% y = handles.point(2);
-% z = handles.point(3);
-% plot3(handles.bigGraph, x,y,z,'o','Color','red');
-refreshdata(handles.bigGraph);
+x = handles.point(1);
+y = handles.point(2);
+z = handles.point(3);
+
+set(handles.pointPlot, 'XData', x, 'YData', y, 'ZData', z);
 
 guidata(handles.figure1, handles);
 
 function drawMotionVectorsAt(time, handles)
 
+
+if(get(handles.positionLabel, 'Value'))
+    rVector = VectorExtendingFrom([0;0;0], handles.r(time));
+    set(handles.positionPlot, 'XData', rVector(1,:), ...
+        'YData', rVector(2,:), 'ZData', rVector(3,:));
+end
 
 if(curveIsLine(handles))
     handles.curvature = 0;
@@ -503,13 +549,15 @@ if(curveIsLine(handles))
     v = matlabFunction(handles.velocity);
     vVector = VectorExtendingFrom(handles.r(time), v());
     if(get(handles.velocityLabel, 'Value'))
-        plot3(handles.bigGraph, vVector(1,:), vVector(2,:), vVector(3,:), '-.r');
+        set(handles.velocityPlot, 'XData', vVector(1,:), ...
+            'YData', vVector(2,:), 'ZData', vVector(3,:));
     end
 else
     v = matlabFunction(handles.velocity);
     vVector = VectorExtendingFrom(handles.r(time), v(time));
     if(get(handles.velocityLabel, 'Value'))
-        plot3(handles.bigGraph, vVector(1,:), vVector(2,:), vVector(3,:), '-.r');
+        set(handles.velocityPlot, 'XData', vVector(1,:), ...
+            'YData', vVector(2,:), 'ZData', vVector(3,:));
     end
     
     a = matlabFunction(handles.acceleration);
@@ -525,7 +573,8 @@ else
         handles.curvature = norm(cross(v(time),a(time)))/(norm(v(time)))^3;
     end
     if(get(handles.accelerationLabel, 'Value'))
-        plot3(handles.bigGraph, aVector(1,:), aVector(2,:), aVector(3,:), '-.r');
+        set(handles.accelerationPlot, 'XData', aVector(1,:), ...
+            'YData', aVector(2,:), 'ZData', aVector(3,:));
     end
     
     
@@ -557,10 +606,12 @@ else
     bVector = VectorExtendingFrom(handles.r(time), B);
     
     if(get(handles.normalLabel, 'Value'))
-        plot3(handles.bigGraph, nVector(1,:), nVector(2,:), nVector(3,:), '--g');
+        set(handles.normalPlot, 'XData', nVector(1,:), ...
+            'YData', nVector(2,:), 'ZData', nVector(3,:));
     end
     if(get(handles.binormalLabel, 'Value'))
-        plot3(handles.bigGraph, bVector(1,:), bVector(2,:), bVector(3,:), '--g');
+        set(handles.binormalPlot, 'XData', bVector(1,:), ...
+            'YData', bVector(2,:), 'ZData', bVector(3,:));
     end
 end
 
@@ -568,7 +619,8 @@ tVector = VectorExtendingFrom(handles.r(time), T);
 
 
 if(get(handles.tangentLabel, 'Value'))
-    plot3(handles.bigGraph, tVector(1,:), tVector(2,:), tVector(3,:), '--g');
+    set(handles.tangentPlot, 'XData', tVector(1,:), ...
+            'YData', tVector(2,:), 'ZData', tVector(3,:));
 end
 
 
@@ -577,7 +629,7 @@ points = [point, point + vector];
 
 
 function updateGraph(handles)
-cla(handles.bigGraph);
+% cla(handles.bigGraph);
 % If position display is enabled
 if(get(handles.positionLabel,'Value'))
     drawCurve(handles);
@@ -739,8 +791,10 @@ function positionLabel_Callback(hObject, eventdata, handles)
 updateGraph(handles);
 if(get(hObject, 'Value'))
     set(hObject, 'ForegroundColor', 'White');
+    set(handles.positionPlot, 'Visible', 'on');
 else
     set(hObject, 'ForegroundColor', 'Black');
+    set(handles.positionPlot, 'Visible', 'off');
 end
 
 % --- Executes on button press in velocityLabel.
@@ -753,8 +807,10 @@ function velocityLabel_Callback(hObject, eventdata, handles)
 updateGraph(handles);
 if(get(hObject, 'Value'))
     set(hObject, 'ForegroundColor', 'White');
+    set(handles.velocityPlot, 'Visible', 'on');
 else
     set(hObject, 'ForegroundColor', 'Black');
+    set(handles.velocityPlot, 'Visible', 'off');
 end
 
 
@@ -768,8 +824,10 @@ function accelerationLabel_Callback(hObject, eventdata, handles)
 updateGraph(handles);
 if(get(hObject, 'Value'))
     set(hObject, 'ForegroundColor', 'White');
+    set(handles.accelerationPlot, 'Visible', 'on');
 else
     set(hObject, 'ForegroundColor', 'Black');
+    set(handles.accelerationPlot, 'Visible', 'off');
 end
 
 
@@ -783,8 +841,10 @@ function tangentLabel_Callback(hObject, eventdata, handles)
 updateGraph(handles);
 if(get(hObject, 'Value'))
     set(hObject, 'ForegroundColor', 'White');
+    set(handles.tangentPlot, 'Visible', 'on');
 else
     set(hObject, 'ForegroundColor', 'Black');
+    set(handles.tangentPlot, 'Visible', 'off');
 end
 
 % --- Executes on button press in normalLabel.
@@ -797,8 +857,10 @@ function normalLabel_Callback(hObject, eventdata, handles)
 updateGraph(handles);
 if(get(hObject, 'Value'))
     set(hObject, 'ForegroundColor', 'White');
+    set(handles.normalPlot, 'Visible', 'on');
 else
     set(hObject, 'ForegroundColor', 'Black');
+    set(handles.normalPlot, 'Visible', 'off');
 end
 
 % --- Executes on button press in binormalLabel.
@@ -811,8 +873,10 @@ function binormalLabel_Callback(hObject, eventdata, handles)
 updateGraph(handles);
 if(get(hObject, 'Value'))
     set(hObject, 'ForegroundColor', 'White');
+    set(handles.binormalPlot, 'Visible', 'on');
 else
     set(hObject, 'ForegroundColor', 'Black');
+    set(handles.binormalPlot, 'Visible', 'off');
 end
 
 
