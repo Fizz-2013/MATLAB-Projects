@@ -22,7 +22,7 @@ function varargout = CurvePlotter3D(varargin)
 
 % Edit the above text to modify the response to help CurvePlotter3D
 
-% Last Modified by GUIDE v2.5 21-Apr-2014 11:27:07
+% Last Modified by GUIDE v2.5 21-Apr-2014 12:45:57
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -65,7 +65,12 @@ handles.divisions = 50;
 handles.tStart = 0;
 handles.tEnd = 10;
 handles.tPoint = 0;
+
+% Initialize Timer
 handles.tRate = 1;
+handles.timer = timer('ExecutionMode', 'fixedRate', ...
+    'Period', 1/5, ...
+    'TimerFcn', @updateTimer);
 
 
 % Initialize Cursor
@@ -470,7 +475,6 @@ end
 
 guidata(handles.figure1, handles);
 
-
 function handles = calculateCurveLength(handles)
 
 % Calculate curve length
@@ -478,19 +482,51 @@ handles.speed = matlabFunction(norm(handles.velocity));
 
 if(curveIsLine(handles))
     length = norm(handles.r(handles.tEnd) - handles.r(handles.tStart));
+    
+    if(exactValuesActivated(handles))
+        position = symfun(handles.curve, sym('t'));
+        exactAnswer = norm(position(handles.tEnd)-position(handles.tStart));
+    end
 else
     length = integral(handles.speed, handles.tStart, handles.tEnd);
+    
+    if(exactValuesActivated(handles))
+        exactAnswer = int(norm(handles.velocity), handles.tStart, handles.tEnd);
+    end
 end
 
 set(handles.lengthBox, 'String', length);
 
+if(exactValuesActivated(handles))
+    set(handles.lengthBox, 'ToolTipString', ...
+        ['Exact Answer: ' char(exactAnswer)]);
+else
+    set(handles.lengthBox, 'ToolTipString', '');
+end
+
 function arcLength = calculateArcLength(handles)
 if(curveIsLine(handles))
     arcLength = norm(handles.r(handles.tPoint) - handles.r(handles.tStart));
+    
+    if(exactValuesActivated(handles))
+        position = symfun(handles.curve, sym('t'));
+        exactAnswer = norm(position(handles.tPoint)-position(handles.tStart));
+    end
 else
     arcLength = integral(handles.speed, handles.tStart, handles.tPoint);
+    
+    if(exactValuesActivated(handles))
+        exactAnswer = int(norm(handles.velocity), handles.tStart, handles.tPoint);
+    end
 end
 set(handles.arcLengthText, 'String', arcLength);
+
+if(exactValuesActivated(handles))
+    set(handles.arcLengthText, 'ToolTipString', ...
+        ['Exact Answer: ' char(exactAnswer)]);
+else
+    set(handles.arcLengthText, 'ToolTipString', '');
+end
 
 
 function handles = createCurve(handles)
@@ -615,7 +651,7 @@ tVector = VectorExtendingFrom(handles.r(time), T);
 
 if(get(handles.tangentLabel, 'Value'))
     set(handles.tangentPlot, 'XData', tVector(1,:), ...
-            'YData', tVector(2,:), 'ZData', tVector(3,:));
+        'YData', tVector(2,:), 'ZData', tVector(3,:));
 end
 
 
@@ -625,14 +661,12 @@ points = [point, point + vector];
 
 function updateGraph(handles)
 % If position display is enabled
-if(get(handles.positionLabel,'Value'))
-    drawCurve(handles);
-end
-set(handles.bigGraph, 'NextPlot', 'add');
+drawCurve(handles);
+
 drawPoint(handles);
 drawMotionVectorsAt(handles.tPoint, handles);
 drawUnitVectorsAt(handles.tPoint, handles);
-set(handles.bigGraph, 'NextPlot', 'replace');
+
 guidata(handles.figure1, handles);
 
 
@@ -970,18 +1004,26 @@ if(scalarFunction ~= 0)
         handles.tStart, handles.tEnd, ...
         'ArrayValued', true);
     
-    % Solving equation, set busy
-    exactAnswer = int(scalarFunction, t, handles.tStart, handles.tEnd);
+    if(exactValuesActivated(handles))
+        % Solving equation, set busy
+        exactAnswer = int(scalarFunction, t, handles.tStart, handles.tEnd);
+    end
     
 else
     value = 0;
-    exactAnswer = 0;
+    if(exactValuesActivated(handles))
+        exactAnswer = 0;
+    end
 end
 
 set(handles.scalarIntAns, 'String', value);
-set(handles.scalarIntAns, 'ToolTipString', ...
-    ['Exact Answer: ' char(exactAnswer)]);
-
+if(exactValuesActivated(handles))
+    set(handles.scalarIntAns, 'ToolTipString', ...
+        ['Exact Answer: ' char(exactAnswer)]);
+else
+    set(handles.scalarIntAns, 'ToolTipString', ...
+        '');
+end
 
 
 guidata(handles.figure1, handles);
@@ -1025,34 +1067,34 @@ componentHandles = {handles.iCompText; handles.jCompText; handles.kCompText};
 
 
 for i = 1:3
-%If corresponding text box has invalid code, reset to previous
-funcText = get(componentHandles{i}, 'String');
-
-if(isempty(funcText))
-    set(componentHandles{i}, 'String', 0);
-    continue;
-end
-
-variables = symvar(funcText);
-if ~isempty(variables)
-
+    %If corresponding text box has invalid code, reset to previous
+    funcText = get(componentHandles{i}, 'String');
     
-    % Check for valid variables, if valid, replace with the function string
-    for(i=1:length(variables))
-        variable = variables{i};
-        
-        if ~strcmp(variable, 'x') ...
-                && ~strcmp(variable, 'y') ...
-                && ~strcmp(variable, 'z')
-            
-            error(['FUNCTION ERROR: ' ...
-                variable ' is not a valid variable. ' ...
-                'The formula can only have x, y, z or constants.']);
-        end
+    if(isempty(funcText))
+        set(componentHandles{i}, 'String', 0);
+        continue;
     end
     
-end
-
+    variables = symvar(funcText);
+    if ~isempty(variables)
+        
+        
+        % Check for valid variables, if valid, replace with the function string
+        for(i=1:length(variables))
+            variable = variables{i};
+            
+            if ~strcmp(variable, 'x') ...
+                    && ~strcmp(variable, 'y') ...
+                    && ~strcmp(variable, 'z')
+                
+                error(['FUNCTION ERROR: ' ...
+                    variable ' is not a valid variable. ' ...
+                    'The formula can only have x, y, z or constants.']);
+            end
+        end
+        
+    end
+    
 end
 
 vector = ['[ ' get(handles.iCompText, 'String') ';' ...
@@ -1066,18 +1108,26 @@ if(vectorFunction ~= 0)
         handles.tStart, handles.tEnd, ...
         'ArrayValued', true);
     
-    % Solving equation, set busy
-    exactAnswer = int(vectorFunction, t, handles.tStart, handles.tEnd);
-    
+    if(exactValuesActivated(handles))
+        % Solving equation, set busy
+        exactAnswer = int(vectorFunction, t, handles.tStart, handles.tEnd);
+    end
 else
     value = 0;
-    exactAnswer = 0;
+    
+    if(exactValuesActivated(handles))
+        exactAnswer = 0;
+    end
 end
 
 set(handles.vectorIntAns, 'String', value);
-set(handles.vectorIntAns, 'ToolTipString', ...
-    ['Exact Answer: ' char(exactAnswer)]);
 
+if(exactValuesActivated(handles))
+    set(handles.vectorIntAns, 'ToolTipString', ...
+        ['Exact Answer: ' char(exactAnswer)]);
+else
+    set(handles.vectorIntAns, 'ToolTipString', '');
+end
 
 
 guidata(handles.figure1, handles);
@@ -1137,8 +1187,122 @@ function toScaleButton_Callback(hObject, eventdata, handles)
 % Hint: get(hObject,'Value') returns toggle state of toScaleButton
 if(get(hObject,'Value') == true)
     axis(handles.bigGraph, 'equal');
+    set(hObject, 'ForegroundColor', 'White');
 else
     axis(handles.bigGraph, 'normal');
+    set(hObject, 'ForegroundColor', 'Black');
 end
 
 guidata(handles.figure1, handles);
+
+
+
+function rateText_Callback(hObject, eventdata, handles)
+% hObject    handle to rateText (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of rateText as text
+%        str2double(get(hObject,'String')) returns contents of rateText as a double
+
+try
+    boxFunction = get(hObject, 'String');
+    if ~(isa(eval([(boxFunction) ';']),'double'))
+        error('Must be a valid numerical expression.');
+    end
+    testNum = eval([boxFunction ';']);
+    
+    %if number is within domain
+    if(testNum <= 0)
+        error('Value must be positive!');
+    end
+catch err
+    set(hObject, 'String', handles.tRate);
+    disp(['ERROR SETTING RATE VALUE: ' err.message])
+end
+
+handles.tRate = eval([get(hObject, 'String') ';']);
+set(hObject, 'String', handles.tRate);
+guidata(handles.figure1, handles);
+
+
+% --- Executes during object creation, after setting all properties.
+function rateText_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to rateText (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in playButton.
+function playButton_Callback(hObject, eventdata, handles)
+% hObject    handle to playButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if strcmp(get(handles.timer, 'Running'), 'off')
+    set(handles.playButton, 'String', 'Stop');
+    start(handles.timer);
+else
+    stop(handles.timer);
+    set(handles.playButton, 'String', 'Play');
+end
+guidata(handles.figure1, handles);
+
+% --- Executes on button press in resetButton.
+function resetButton_Callback(hObject, eventdata, handles)
+% hObject    handle to resetButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+handles.tPoint = handles.tStart;
+handles = updateTPoint(handles);
+drawPoint(handles);
+drawMotionVectorsAt(handles.tPoint, handles);
+drawUnitVectorsAt(handles.tPoint, handles);
+stop(handles.timer);
+set(handles.playButton, 'String', 'Play');
+guidata(handles.figure1, handles);
+
+
+
+
+function updateTimer(object, eventdata)
+hfigure = getappdata(0, 'CurvePlotter3D');
+handles = guidata(hfigure);
+if(handles.tPoint + handles.tRate/5 <= handles.tEnd)
+    handles.tPoint = handles.tPoint + handles.tRate/5;
+    handles = updateTPoint(handles);
+    drawPoint(handles);
+    drawMotionVectorsAt(handles.tPoint, handles);
+    drawUnitVectorsAt(handles.tPoint, handles);
+    drawnow;
+else
+    stop(handles.timer);
+    set(handles.playButton, 'String', 'Play');
+end
+guidata(handles.figure1, handles);
+
+
+
+% --- Executes on button press in exactValues.
+function exactValues_Callback(hObject, eventdata, handles)
+% hObject    handle to exactValues (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of exactValues
+calculateArcLength(handles);
+calculateCurveLength(handles);
+
+if(get(hObject,'Value') == true)
+    set(hObject, 'ForegroundColor', 'White');
+else
+    set(hObject, 'ForegroundColor', 'Black');
+end
+
+function answer = exactValuesActivated(handles)
+answer = get(handles.exactValues, 'Value')
