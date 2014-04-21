@@ -84,7 +84,6 @@ handles.vectorIntLabel = uibutton(handles.vectorIntLabel, ...
 
 
 
-% handles = updateFunctionButton_Callback(handles.updateFunctionButton, eventdata, handles);
 
 handles = initialPlot(handles);
 
@@ -390,9 +389,6 @@ guidata(handles.figure1, handles);
 
 function handles = checkFunctionText(handles)
 
-%dummy test variable
-% t = handles.tStart;
-% t = handles.t(1);
 syms('t');
 
 %If corresponding text box has invalid code, reset to previous
@@ -520,7 +516,6 @@ z = curve(3,:);
 
 set(handles.curvePlot, 'XData', x, 'YData', y, 'ZData', z);
 
-% plot3(handles.bigGraph, x,y,z);
 
 guidata(handles.figure1, handles);
 
@@ -629,7 +624,6 @@ points = [point, point + vector];
 
 
 function updateGraph(handles)
-% cla(handles.bigGraph);
 % If position display is enabled
 if(get(handles.positionLabel,'Value'))
     drawCurve(handles);
@@ -759,10 +753,6 @@ text = sprintf('X: %f\nY: %f\nZ: %f\nTime: %f',...
     position(2),...
     position(3),...
     time(dataIndex));
-
-% hold on;
-% drawVectorsAt(time(dataIndex), handles);
-% hold off;
 
 
 % --- Executes when user attempts to close figure1.
