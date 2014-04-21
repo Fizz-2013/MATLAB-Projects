@@ -22,7 +22,7 @@ function varargout = CurvePlotter3D(varargin)
 
 % Edit the above text to modify the response to help CurvePlotter3D
 
-% Last Modified by GUIDE v2.5 20-Apr-2014 15:22:39
+% Last Modified by GUIDE v2.5 21-Apr-2014 09:55:55
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -89,8 +89,19 @@ set(handles.positionLabel, 'Value', true);
 
 handles = updateFunctionButton_Callback(handles.updateFunctionButton, eventdata, handles);
 
+initialPlot(handles);
+
 % Update handles structure
 guidata(hObject, handles);
+
+
+function initialPlot(handles)
+handles.point = (handles.r(handles.tPoint));
+handles.pointPlot = plot3(handles.bigGraph, handles.point(1), ...
+    handles.point(2),  handles.point(3),'o','Color','red');
+set(handles.pointPlot, 'XDataSource', 'handles.point(1)');
+set(handles.pointPlot, 'XDataSource', 'handles.point(2)');
+set(handles.pointPlot, 'XDataSource', 'handles.point(3)');
 
 
 
@@ -135,44 +146,6 @@ function timeBox_CreateFcn(hObject, eventdata, handles)
 %       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
-end
-
-function index = componentIndex(component)
-% get the index for the specified component
-switch(class(component))
-    case 'double'
-        if(component > 0 && component < 3)
-            index = component;
-            return;
-        end
-    case 'char'
-        switch(component)
-            case 'x'
-                index = 1;
-                return;
-            case 'y'
-                index = 2;
-                return;
-            case 'z'
-                index = 3;
-                return;
-        end
-end
-
-%reached if no case is true
-error('Invalid input! Component must be either x, y, z, or 0, 1, 2');
-
-function name = getComponentName(component)
-if(~strcmp(class(component),'double') || component < 1 || component > 3)
-    error('Invalid input! Must be an integer of 1, 2, or 3.');
-end
-switch(component)
-    case 1
-        name = 'x';
-    case 2
-        name = 'y';
-    case 3
-        name = 'z';
 end
 
 
@@ -512,11 +485,12 @@ plot3(handles.bigGraph, x,y,z);
 guidata(handles.figure1, handles);
 
 function drawPoint(handles)
-point = (handles.r(handles.tPoint));
-x = point(1);
-y = point(2);
-z = point(3);
-plot3(handles.bigGraph, x,y,z,'o','Color','red');
+handles.point = (handles.r(handles.tPoint));
+% x = handles.point(1);
+% y = handles.point(2);
+% z = handles.point(3);
+% plot3(handles.bigGraph, x,y,z,'o','Color','red');
+refreshdata(handles.bigGraph);
 
 guidata(handles.figure1, handles);
 
@@ -728,7 +702,6 @@ function text = displayDataPoint(obj, event_obj)
 position = get(event_obj, 'Position');
 dataIndex = get(event_obj, 'DataIndex');
 time = getTimeVector;
-disp(position);
 text = sprintf('X: %f\nY: %f\nZ: %f\nTime: %f',...
     position(1),...
     position(2),...
@@ -1099,3 +1072,19 @@ function kCompText_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+
+% --- Executes on button press in toScaleButton.
+function toScaleButton_Callback(hObject, eventdata, handles)
+% hObject    handle to toScaleButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of toScaleButton
+if(get(hObject,'Value') == true)
+    axis(handles.bigGraph, 'equal');
+else
+    axis(handles.bigGraph, 'normal');
+end
+
+guidata(handles.figure1, handles);
