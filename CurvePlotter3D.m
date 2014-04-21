@@ -22,7 +22,7 @@ function varargout = CurvePlotter3D(varargin)
 
 % Edit the above text to modify the response to help CurvePlotter3D
 
-% Last Modified by GUIDE v2.5 21-Apr-2014 12:45:57
+% Last Modified by GUIDE v2.5 21-Apr-2014 13:33:17
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -199,7 +199,9 @@ function xBox_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of xBox as text
 %        str2double(get(hObject,'String')) returns contents of xBox as a double
-
+if(isempty(get(hObject, 'String')))
+    set(hObject, 'String', char(handles.xFunction));
+end
 
 
 % --- Executes during object creation, after setting all properties.
@@ -223,7 +225,9 @@ function yBox_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of yBox as text
 %        str2double(get(hObject,'String')) returns contents of yBox as a double
-
+if(isempty(get(hObject, 'String')))
+    set(hObject, 'String', char(handles.yFunction));
+end
 
 % --- Executes during object creation, after setting all properties.
 function yBox_CreateFcn(hObject, eventdata, handles)
@@ -246,7 +250,9 @@ function zBox_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of zBox as text
 %        str2double(get(hObject,'String')) returns contents of zBox as a double
-
+if(isempty(get(hObject, 'String')))
+    set(hObject, 'String', char(handles.zFunction));
+end
 
 % --- Executes during object creation, after setting all properties.
 function zBox_CreateFcn(hObject, eventdata, handles)
@@ -396,30 +402,45 @@ function handles = checkFunctionText(handles)
 
 syms('t');
 
+xVars = symvar(get(handles.xBox, 'String'));
+yVars = symvar(get(handles.yBox, 'String'));
+zVars = symvar(get(handles.zBox, 'String'));
+
+
+
+if(isempty(xVars) && isempty(yVars) && isempty(zVars))
+    set(handles.xBox, 'String', char(handles.xFunction));
+    set(handles.yBox, 'String', char(handles.yFunction));
+    set(handles.zBox, 'String', char(handles.zFunction));
+    error(['FUNCTION ERROR: Curve cannot be a constant point.']);
+end
+
 %If corresponding text box has invalid code, reset to previous
-variables = symvar(get(handles.xBox, 'String'));
-if isempty(variables) || (strcmp(variables{1},'t') && length(variables) == 1)
+
+if isempty(xVars) || (strcmp(xVars{1},'t') && length(xVars) == 1)
     handles.xFunction = sym(get(handles.xBox, 'String'));
 else
     set(handles.xBox, 'String', char(handles.xFunction));
     error(['FUNCTION ERROR: The formula must only have t as the variable.']);
 end
 
-variables = symvar(get(handles.yBox, 'String'));
-if isempty(variables) || (strcmp(variables{1},'t') && length(variables) == 1)
+
+if isempty(yVars) || (strcmp(yVars{1},'t') && length(yVars) == 1)
     handles.yFunction = sym(get(handles.yBox, 'String'));
 else
     set(handles.yBox, 'String', char(handles.yFunction));
     error(['FUNCTION ERROR: The formula must only have t as the variable.']);
 end
 
-variables = symvar(get(handles.zBox, 'String'));
-if isempty(variables) || (strcmp(variables{1},'t') && length(variables) == 1)
+
+if isempty(zVars) || (strcmp(zVars{1},'t') && length(zVars) == 1)
     handles.zFunction = sym(get(handles.zBox, 'String'));
 else
     set(handles.zBox, 'String', char(handles.zFunction));
     error(['FUNCTION ERROR: The formula must only have t as the variable.']);
 end
+
+
 
 guidata(handles.figure1, handles);
 
@@ -1305,4 +1326,4 @@ else
 end
 
 function answer = exactValuesActivated(handles)
-answer = get(handles.exactValues, 'Value')
+answer = get(handles.exactValues, 'Value');
