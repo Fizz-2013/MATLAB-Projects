@@ -77,6 +77,13 @@ handles.timer = timer('ExecutionMode', 'fixedRate', ...
 handles.cursorObj = datacursormode(handles.figure1);
 set(handles.cursorObj, 'UpdateFcn', @displayDataPoint);
 
+% Check and add uibutton folder
+if ~(exist('uibutton')==7 || exist('uibutton', 'dir'))
+    error('Must have uibutton program added!');
+else
+    addpath('uibutton');
+end
+
 % Creating Integral Texts
 handles.scalarIntLabel = uibutton(handles.scalarIntLabel, ...
     'Interpreter', 'LaTex', ...
@@ -306,7 +313,8 @@ try
     end
 catch err
     set(handles.timeBox, 'String', handles.tPoint);
-    disp(['ERROR SETTING TIME VALUE: ' err.message])
+    errordlg(['ERROR SETTING TIME VALUE: ' err.message], ...
+        'Input Error', 'modal');
 end
 
 handles.tPoint = eval([get(handles.timeBox, 'String') ';']);
@@ -362,7 +370,8 @@ try
     end
 catch err
     set(handles.divisionBox, 'String', handles.divisions);
-    disp(['ERROR SETTING NUMBER OF DIVISIONS: ' err.message])
+    errordlg(['ERROR SETTING NUMBER OF DIVISIONS: ' err.message], ...
+        'Input Error', 'modal');
 end
 
 handles.divisions = eval([get(handles.divisionBox, 'String') ';']);
@@ -387,7 +396,8 @@ try
 catch err
     set(handles.tStartBox, 'String', handles.tStart);
     set(handles.tEndBox, 'String', handles.tEnd);
-    disp(['INTERVAL ERROR: ' err.message])
+    errordlg(['INTERVAL ERROR: ' err.message], ...
+        'Input Error', 'modal');
 end
 
 handles.tStart = eval([get(handles.tStartBox, 'String') ';']);
@@ -406,41 +416,44 @@ xVars = symvar(get(handles.xBox, 'String'));
 yVars = symvar(get(handles.yBox, 'String'));
 zVars = symvar(get(handles.zBox, 'String'));
 
-
-
-if(isempty(xVars) && isempty(yVars) && isempty(zVars))
-    set(handles.xBox, 'String', char(handles.xFunction));
-    set(handles.yBox, 'String', char(handles.yFunction));
-    set(handles.zBox, 'String', char(handles.zFunction));
-    error(['FUNCTION ERROR: Curve cannot be a constant point.']);
+try
+    
+    if(isempty(xVars) && isempty(yVars) && isempty(zVars))
+        set(handles.xBox, 'String', char(handles.xFunction));
+        set(handles.yBox, 'String', char(handles.yFunction));
+        set(handles.zBox, 'String', char(handles.zFunction));
+        error(['Curve cannot be a constant point.']);
+    end
+    
+    %If corresponding text box has invalid code, reset to previous
+    
+    if isempty(xVars) || (strcmp(xVars{1},'t') && length(xVars) == 1)
+        handles.xFunction = sym(get(handles.xBox, 'String'));
+    else
+        set(handles.xBox, 'String', char(handles.xFunction));
+        error(['The formula must only have t as the variable.']);
+    end
+    
+    
+    if isempty(yVars) || (strcmp(yVars{1},'t') && length(yVars) == 1)
+        handles.yFunction = sym(get(handles.yBox, 'String'));
+    else
+        set(handles.yBox, 'String', char(handles.yFunction));
+        error(['The formula must only have t as the variable.']);
+    end
+    
+    
+    if isempty(zVars) || (strcmp(zVars{1},'t') && length(zVars) == 1)
+        handles.zFunction = sym(get(handles.zBox, 'String'));
+    else
+        set(handles.zBox, 'String', char(handles.zFunction));
+        error(['The formula must only have t as the variable.']);
+    end
+    
+catch err
+    errordlg(['FUNCTION ERROR: ' err.message], ...
+        'Input Error', 'modal');
 end
-
-%If corresponding text box has invalid code, reset to previous
-
-if isempty(xVars) || (strcmp(xVars{1},'t') && length(xVars) == 1)
-    handles.xFunction = sym(get(handles.xBox, 'String'));
-else
-    set(handles.xBox, 'String', char(handles.xFunction));
-    error(['FUNCTION ERROR: The formula must only have t as the variable.']);
-end
-
-
-if isempty(yVars) || (strcmp(yVars{1},'t') && length(yVars) == 1)
-    handles.yFunction = sym(get(handles.yBox, 'String'));
-else
-    set(handles.yBox, 'String', char(handles.yFunction));
-    error(['FUNCTION ERROR: The formula must only have t as the variable.']);
-end
-
-
-if isempty(zVars) || (strcmp(zVars{1},'t') && length(zVars) == 1)
-    handles.zFunction = sym(get(handles.zBox, 'String'));
-else
-    set(handles.zBox, 'String', char(handles.zFunction));
-    error(['FUNCTION ERROR: The formula must only have t as the variable.']);
-end
-
-
 
 guidata(handles.figure1, handles);
 
@@ -995,56 +1008,64 @@ if(isempty(funcText))
     return;
 end
 
-variables = symvar(funcText);
-if ~isempty(variables)
-    x = handles.xFunction;
-    y = handles.yFunction;
-    z = handles.zFunction;
+try
     
-    % Check for valid variables, if valid, replace with the function string
-    for(i=1:length(variables))
-        variable = variables{i};
+    variables = symvar(funcText);
+    if ~isempty(variables)
+        x = handles.xFunction;
+        y = handles.yFunction;
+        z = handles.zFunction;
         
-        if ~strcmp(variable, 'x') ...
-                && ~strcmp(variable, 'y') ...
-                && ~strcmp(variable, 'z')
+        % Check for valid variables, if valid, replace with the function string
+        for(i=1:length(variables))
+            variable = variables{i};
             
-            error(['FUNCTION ERROR: ' ...
-                variable ' is not a valid variable. ' ...
-                'The formula can only have x, y, z or constants.']);
+            if ~strcmp(variable, 'x') ...
+                    && ~strcmp(variable, 'y') ...
+                    && ~strcmp(variable, 'z')
+                
+                error(['FUNCTION ERROR: ' ...
+                    variable ' is not a valid variable. ' ...
+                    'The formula can only have x, y, z or constants.'])
+            end
+        end
+        
+    end
+    
+    scalarFunction = eval(funcText) * norm(handles.velocity);
+    
+    if(scalarFunction ~= 0)
+        % Solve line integral numerically
+        value = integral(matlabFunction(scalarFunction, 'vars', 't'), ...
+            handles.tStart, handles.tEnd, ...
+            'ArrayValued', true);
+        
+        if(exactValuesActivated(handles))
+            % Solving equation, set busy
+            exactAnswer = int(scalarFunction, t, handles.tStart, handles.tEnd);
+        end
+        
+    else
+        value = 0;
+        if(exactValuesActivated(handles))
+            exactAnswer = 0;
         end
     end
     
-end
-
-scalarFunction = eval(funcText) * norm(handles.velocity);
-
-if(scalarFunction ~= 0)
-    % Solve line integral numerically
-    value = integral(matlabFunction(scalarFunction, 'vars', 't'), ...
-        handles.tStart, handles.tEnd, ...
-        'ArrayValued', true);
-    
+    set(handles.scalarIntAns, 'String', value);
     if(exactValuesActivated(handles))
-        % Solving equation, set busy
-        exactAnswer = int(scalarFunction, t, handles.tStart, handles.tEnd);
+        set(handles.scalarIntAns, 'ToolTipString', ...
+            ['Exact Answer: ' char(exactAnswer)]);
+    else
+        set(handles.scalarIntAns, 'ToolTipString', ...
+            '');
     end
     
-else
-    value = 0;
-    if(exactValuesActivated(handles))
-        exactAnswer = 0;
-    end
+catch err
+    errordlg(err.message, 'Solving Error', 'modal');
+    set(handles.scalarIntAns, 'String', 'N/A');
 end
 
-set(handles.scalarIntAns, 'String', value);
-if(exactValuesActivated(handles))
-    set(handles.scalarIntAns, 'ToolTipString', ...
-        ['Exact Answer: ' char(exactAnswer)]);
-else
-    set(handles.scalarIntAns, 'ToolTipString', ...
-        '');
-end
 
 
 guidata(handles.figure1, handles);
@@ -1086,70 +1107,77 @@ z = handles.zFunction;
 
 componentHandles = {handles.iCompText; handles.jCompText; handles.kCompText};
 
-
-for i = 1:3
-    %If corresponding text box has invalid code, reset to previous
-    funcText = get(componentHandles{i}, 'String');
+try
     
-    if(isempty(funcText))
-        set(componentHandles{i}, 'String', 0);
-        continue;
-    end
-    
-    variables = symvar(funcText);
-    if ~isempty(variables)
+    for i = 1:3
+        %If corresponding text box has invalid code, reset to previous
+        funcText = get(componentHandles{i}, 'String');
         
+        if(isempty(funcText))
+            set(componentHandles{i}, 'String', 0);
+            continue;
+        end
         
-        % Check for valid variables, if valid, replace with the function string
-        for(i=1:length(variables))
-            variable = variables{i};
+        variables = symvar(funcText);
+        if ~isempty(variables)
             
-            if ~strcmp(variable, 'x') ...
-                    && ~strcmp(variable, 'y') ...
-                    && ~strcmp(variable, 'z')
+            
+            % Check for valid variables, if valid, replace with the function string
+            for(i=1:length(variables))
+                variable = variables{i};
                 
-                error(['FUNCTION ERROR: ' ...
-                    variable ' is not a valid variable. ' ...
-                    'The formula can only have x, y, z or constants.']);
+                if ~strcmp(variable, 'x') ...
+                        && ~strcmp(variable, 'y') ...
+                        && ~strcmp(variable, 'z')
+                    
+                    errordlg(['FUNCTION ERROR: ' ...
+                        variable ' is not a valid variable. ' ...
+                        'The formula can only have x, y, z or constants.'], ...
+                        'Input Error', 'modal');
+                    return;
+                end
             end
+            
         end
         
     end
     
-end
-
-vector = ['[ ' get(handles.iCompText, 'String') ';' ...
-    get(handles.jCompText, 'String') ';' ...
-    get(handles.kCompText, 'String') ']'];
-vectorFunction = dot(eval(vector),handles.velocity);
-
-if(vectorFunction ~= 0)
-    % Solve line integral numerically
-    value = integral(matlabFunction(vectorFunction, 'vars', 't'), ...
-        handles.tStart, handles.tEnd, ...
-        'ArrayValued', true);
+    vector = ['[ ' get(handles.iCompText, 'String') ';' ...
+        get(handles.jCompText, 'String') ';' ...
+        get(handles.kCompText, 'String') ']'];
+    vectorFunction = dot(eval(vector),handles.velocity);
+    
+    if(vectorFunction ~= 0)
+        % Solve line integral numerically
+        value = integral(matlabFunction(vectorFunction, 'vars', 't'), ...
+            handles.tStart, handles.tEnd, ...
+            'ArrayValued', true);
+        
+        if(exactValuesActivated(handles))
+            % Solving equation, set busy
+            exactAnswer = int(vectorFunction, t, handles.tStart, handles.tEnd);
+        end
+    else
+        value = 0;
+        
+        if(exactValuesActivated(handles))
+            exactAnswer = 0;
+        end
+    end
+    
+    set(handles.vectorIntAns, 'String', value);
     
     if(exactValuesActivated(handles))
-        % Solving equation, set busy
-        exactAnswer = int(vectorFunction, t, handles.tStart, handles.tEnd);
+        set(handles.vectorIntAns, 'ToolTipString', ...
+            ['Exact Answer: ' char(exactAnswer)]);
+    else
+        set(handles.vectorIntAns, 'ToolTipString', '');
     end
-else
-    value = 0;
     
-    if(exactValuesActivated(handles))
-        exactAnswer = 0;
-    end
+catch err
+    errordlg(err.message, 'Solving Error', 'modal')
+    set(handles.vectorIntAns, 'String', 'N/A');
 end
-
-set(handles.vectorIntAns, 'String', value);
-
-if(exactValuesActivated(handles))
-    set(handles.vectorIntAns, 'ToolTipString', ...
-        ['Exact Answer: ' char(exactAnswer)]);
-else
-    set(handles.vectorIntAns, 'ToolTipString', '');
-end
-
 
 guidata(handles.figure1, handles);
 
@@ -1239,7 +1267,7 @@ try
     end
 catch err
     set(hObject, 'String', handles.tRate);
-    disp(['ERROR SETTING RATE VALUE: ' err.message])
+    errordlg(['ERROR SETTING RATE VALUE: ' err.message], 'Input Error', 'modal');
 end
 
 handles.tRate = eval([get(hObject, 'String') ';']);
