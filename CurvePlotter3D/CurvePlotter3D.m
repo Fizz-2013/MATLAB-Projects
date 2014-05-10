@@ -22,7 +22,7 @@ function varargout = CurvePlotter3D(varargin)
 
 % Edit the above text to modify the response to help CurvePlotter3D
 
-% Last Modified by GUIDE v2.5 21-Apr-2014 13:33:17
+% Last Modified by GUIDE v2.5 10-May-2014 00:33:11
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -44,6 +44,9 @@ end
 % End initialization code - DO NOT EDIT
 
 
+
+
+%============== Setup Functions
 
 % --- Executes just before CurvePlotter3D is made visible.
 function CurvePlotter3D_OpeningFcn(hObject, eventdata, handles, varargin)
@@ -94,6 +97,8 @@ handles.vectorIntLabel = uibutton(handles.vectorIntLabel, ...
     'String', '$$\int\limits_C \! \vec{F}(x,y,z) \cdot  \, d \vec{r} = $$', ...
     'FontSize', 14);
 
+% Help text
+set(handles.gridToggle, 'TooltipString', 'Toggle Grid Display');
 
 
 
@@ -171,6 +176,11 @@ function varargout = CurvePlotter3D_OutputFcn(hObject, eventdata, handles)
 % Get default command line output from handles structure
 varargout{1} = handles.output;
 
+
+
+
+
+%============== Component Callbacks
 
 % --- Executes during object creation, after setting all properties.
 function timeSlider_CreateFcn(hObject, eventdata, handles)
@@ -328,391 +338,6 @@ updateGraph(handles);
 guidata(handles.figure1, handles);
 
 
-% --- Executes on button press in updateFunctionButton.
-function handles = updateFunctionButton_Callback(hObject, eventdata, handles)
-% hObject    handle to updateFunctionButton (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-
-handles = checkDivisionNumber(handles);
-handles = checkCurveDomain(handles);
-handles = checkFunctionText(handles);
-handles = setFunctions(handles);
-handles = createCurve(handles);
-handles = updateTPoint(handles);
-updateGraph(handles);
-
-guidata(handles.figure1, handles);
-
-
-function handles = updateTPoint(handles)
-set(handles.timeBox, 'String', handles.tPoint);
-set(handles.timeSlider, 'Min', handles.tStart);
-set(handles.timeSlider, 'Max', handles.tEnd);
-set(handles.timeSlider, 'Value', handles.tPoint);
-
-calculateArcLength(handles);
-
-guidata(handles.figure1, handles);
-
-function handles = checkDivisionNumber(handles)
-try
-    boxFunction = get(handles.divisionBox, 'String');
-    if ~(isa(eval([(boxFunction) ';']),'double'))
-        error('Must be a valid numerical expression.');
-    end
-    testNum = eval([boxFunction ';']);
-    
-    %if number is not a positive nonzero integer
-    if(testNum <= 0 || mod(testNum, 1) ~= 0)
-        error('Number of divisions must be a positive integer!');
-    end
-catch err
-    set(handles.divisionBox, 'String', handles.divisions);
-    errordlg(['ERROR SETTING NUMBER OF DIVISIONS: ' err.message], ...
-        'Input Error', 'modal');
-end
-
-handles.divisions = eval([get(handles.divisionBox, 'String') ';']);
-set(handles.divisionBox, 'String', handles.divisions);
-
-guidata(handles.figure1, handles);
-
-function handles = checkCurveDomain(handles)
-
-try
-    startString = get(handles.tStartBox, 'String');
-    endString = get(handles.tEndBox, 'String');
-    if ~(isa(eval([(startString) ';']),'double') && isa(eval([(endString) ';']),'double'))
-        error('Must be a valid numerical expression.');
-    end
-    testStart = eval([startString ';']);
-    testEnd = eval([endString ';']);
-    
-    if ~(testStart <= testEnd)
-        error('Invalid boundary conditions! Respect the comparison signs.');
-    end
-catch err
-    set(handles.tStartBox, 'String', handles.tStart);
-    set(handles.tEndBox, 'String', handles.tEnd);
-    errordlg(['INTERVAL ERROR: ' err.message], ...
-        'Input Error', 'modal');
-end
-
-handles.tStart = eval([get(handles.tStartBox, 'String') ';']);
-handles.tEnd = eval([get(handles.tEndBox, 'String') ';']);
-handles.tPoint = handles.tStart;
-set(handles.tStartBox, 'String', handles.tStart);
-set(handles.tEndBox, 'String', handles.tEnd);
-
-guidata(handles.figure1, handles);
-
-function handles = checkFunctionText(handles)
-
-syms('t');
-
-xVars = symvar(get(handles.xBox, 'String'));
-yVars = symvar(get(handles.yBox, 'String'));
-zVars = symvar(get(handles.zBox, 'String'));
-
-try
-    
-    if(isempty(xVars) && isempty(yVars) && isempty(zVars))
-        set(handles.xBox, 'String', char(handles.xFunction));
-        set(handles.yBox, 'String', char(handles.yFunction));
-        set(handles.zBox, 'String', char(handles.zFunction));
-        error(['Curve cannot be a constant point.']);
-    end
-    
-    %If corresponding text box has invalid code, reset to previous
-    
-    if isempty(xVars) || (strcmp(xVars{1},'t') && length(xVars) == 1)
-        handles.xFunction = sym(get(handles.xBox, 'String'));
-    else
-        set(handles.xBox, 'String', char(handles.xFunction));
-        error(['The formula must only have t as the variable.']);
-    end
-    
-    
-    if isempty(yVars) || (strcmp(yVars{1},'t') && length(yVars) == 1)
-        handles.yFunction = sym(get(handles.yBox, 'String'));
-    else
-        set(handles.yBox, 'String', char(handles.yFunction));
-        error(['The formula must only have t as the variable.']);
-    end
-    
-    
-    if isempty(zVars) || (strcmp(zVars{1},'t') && length(zVars) == 1)
-        handles.zFunction = sym(get(handles.zBox, 'String'));
-    else
-        set(handles.zBox, 'String', char(handles.zFunction));
-        error(['The formula must only have t as the variable.']);
-    end
-    
-catch err
-    errordlg(['FUNCTION ERROR: ' err.message], ...
-        'Input Error', 'modal');
-end
-
-guidata(handles.figure1, handles);
-
-function handles = setFunctions(handles)
-
-% Sets functions to text
-
-handles.curve = [handles.xFunction; handles.yFunction; handles.zFunction];
-
-% Motion Vectors' text
-
-handles.velocity = diff(handles.curve);
-handles.acceleration = diff(handles.velocity);
-
-set(handles.positionText, 'String', ...
-    ['< ' char(handles.xFunction) ', '...
-    char(handles.yFunction) ', ' ...
-    char(handles.zFunction) ' >']);
-set(handles.velocityText, 'String', ...
-    ['< ' char(handles.velocity(1)) ', '...
-    char(handles.velocity(2)) ', ' ...
-    char(handles.velocity(3)) ' >']);
-set(handles.accelerationText, 'String', ...
-    ['< ' char(handles.acceleration(1)) ', '...
-    char(handles.acceleration(2)) ', ' ...
-    char(handles.acceleration(3)) ' >']);
-
-help = sprintf('i: %s\nj: %s\nk: %s', ...
-    char(handles.xFunction), ...
-    char(handles.yFunction), ...
-    char(handles.zFunction));
-set(handles.positionText, 'ToolTipString', help);
-help = sprintf('i: %s\nj: %s\nk: %s', ...
-    char(diff(handles.xFunction)), ...
-    char(diff(handles.yFunction)), ...
-    char(diff(handles.zFunction)));
-set(handles.velocityText, 'ToolTipString', help);
-help = sprintf('i: %s\nj: %s\nk: %s', ...
-    char(diff(handles.xFunction, 2)), ...
-    char(diff(handles.yFunction, 2)), ...
-    char(diff(handles.zFunction, 2)));
-set(handles.accelerationText, 'ToolTipString', help);
-
-if(curveIsLine(handles))
-    set(handles.accelerationLabel, 'Enable', 'off');
-    set(handles.normalLabel, 'Enable', 'off');
-    set(handles.binormalLabel, 'Enable', 'off');
-else
-    set(handles.accelerationLabel, 'Enable', 'on');
-    set(handles.normalLabel, 'Enable', 'on');
-    set(handles.binormalLabel, 'Enable', 'on');
-end
-
-guidata(handles.figure1, handles);
-
-function handles = calculateCurveLength(handles)
-
-% Calculate curve length
-handles.speed = matlabFunction(norm(handles.velocity));
-
-if(curveIsLine(handles))
-    length = norm(handles.r(handles.tEnd) - handles.r(handles.tStart));
-    
-    if(exactValuesActivated(handles))
-        position = symfun(handles.curve, sym('t'));
-        exactAnswer = norm(position(handles.tEnd)-position(handles.tStart));
-    end
-else
-    length = integral(handles.speed, handles.tStart, handles.tEnd);
-    
-    if(exactValuesActivated(handles))
-        exactAnswer = int(norm(handles.velocity), handles.tStart, handles.tEnd);
-    end
-end
-
-set(handles.lengthBox, 'String', length);
-
-if(exactValuesActivated(handles))
-    set(handles.lengthBox, 'ToolTipString', ...
-        ['Exact Answer: ' char(exactAnswer)]);
-else
-    set(handles.lengthBox, 'ToolTipString', '');
-end
-
-function arcLength = calculateArcLength(handles)
-if(curveIsLine(handles))
-    arcLength = norm(handles.r(handles.tPoint) - handles.r(handles.tStart));
-    
-    if(exactValuesActivated(handles))
-        position = symfun(handles.curve, sym('t'));
-        exactAnswer = norm(position(handles.tPoint)-position(handles.tStart));
-    end
-else
-    arcLength = integral(handles.speed, handles.tStart, handles.tPoint);
-    
-    if(exactValuesActivated(handles))
-        exactAnswer = int(norm(handles.velocity), handles.tStart, handles.tPoint);
-    end
-end
-set(handles.arcLengthText, 'String', arcLength);
-
-if(exactValuesActivated(handles))
-    set(handles.arcLengthText, 'ToolTipString', ...
-        ['Exact Answer: ' char(exactAnswer)]);
-else
-    set(handles.arcLengthText, 'ToolTipString', '');
-end
-
-
-function handles = createCurve(handles)
-t = linspace(handles.tStart, handles.tEnd, handles.divisions+1);
-handles.r = matlabFunction(handles.curve);
-
-setappdata(0, 'CurvePlotter3D', gcf);
-setappdata(gcf, 'Time', t);
-
-handles = calculateCurveLength(handles);
-
-guidata(handles.figure1, handles);
-
-function drawCurve(handles)
-t = getTimeVector;
-curve = zeros(3,length(t));
-for i = 1:length(t)
-    curve(:,i) = handles.r(t(i));
-end
-x = curve(1,:);
-y = curve(2,:);
-z = curve(3,:);
-
-set(handles.curvePlot, 'XData', x, 'YData', y, 'ZData', z);
-
-
-guidata(handles.figure1, handles);
-
-function drawPoint(handles)
-handles.point = (handles.r(handles.tPoint));
-x = handles.point(1);
-y = handles.point(2);
-z = handles.point(3);
-
-set(handles.pointPlot, 'XData', x, 'YData', y, 'ZData', z);
-
-guidata(handles.figure1, handles);
-
-function drawMotionVectorsAt(time, handles)
-
-
-if(get(handles.positionLabel, 'Value'))
-    rVector = VectorExtendingFrom([0;0;0], handles.r(time));
-    set(handles.positionPlot, 'XData', rVector(1,:), ...
-        'YData', rVector(2,:), 'ZData', rVector(3,:));
-end
-
-if(curveIsLine(handles))
-    handles.curvature = 0;
-    
-    v = matlabFunction(handles.velocity);
-    vVector = VectorExtendingFrom(handles.r(time), v());
-    if(get(handles.velocityLabel, 'Value'))
-        set(handles.velocityPlot, 'XData', vVector(1,:), ...
-            'YData', vVector(2,:), 'ZData', vVector(3,:));
-    end
-else
-    v = matlabFunction(handles.velocity);
-    vVector = VectorExtendingFrom(handles.r(time), v(time));
-    if(get(handles.velocityLabel, 'Value'))
-        set(handles.velocityPlot, 'XData', vVector(1,:), ...
-            'YData', vVector(2,:), 'ZData', vVector(3,:));
-    end
-    
-    a = matlabFunction(handles.acceleration);
-    
-    if(isempty(symvar(handles.acceleration)))
-        aVector = VectorExtendingFrom(handles.r(time), a());
-        
-        % Curvature
-        handles.curvature = norm(cross(v(time),a()))/(norm(v(time)))^3;
-    else
-        aVector = VectorExtendingFrom(handles.r(time), a(time));
-        % Curvature
-        handles.curvature = norm(cross(v(time),a(time)))/(norm(v(time)))^3;
-    end
-    if(get(handles.accelerationLabel, 'Value'))
-        set(handles.accelerationPlot, 'XData', aVector(1,:), ...
-            'YData', aVector(2,:), 'ZData', aVector(3,:));
-    end
-    
-    
-end
-
-set(handles.curvatureText, 'String', (handles.curvature));
-
-
-function drawUnitVectorsAt(time, handles)
-v = matlabFunction(handles.velocity);
-a = matlabFunction(handles.acceleration);
-
-if(curveIsLine(handles))
-    T = v();
-    T = T/norm(T);
-else
-    T = v(time);
-    T = T/norm(T);
-    % perpendicular component of acceleration
-    
-    if(isempty(symvar(handles.acceleration)))
-        N = a() - dot(a(),T);
-    else
-        N = a(time) - dot(a(time),T);
-    end
-    N = N/norm(N);
-    B = cross(T, N);
-    nVector = VectorExtendingFrom(handles.r(time), N);
-    bVector = VectorExtendingFrom(handles.r(time), B);
-    
-    if(get(handles.normalLabel, 'Value'))
-        set(handles.normalPlot, 'XData', nVector(1,:), ...
-            'YData', nVector(2,:), 'ZData', nVector(3,:));
-    end
-    if(get(handles.binormalLabel, 'Value'))
-        set(handles.binormalPlot, 'XData', bVector(1,:), ...
-            'YData', bVector(2,:), 'ZData', bVector(3,:));
-    end
-end
-
-tVector = VectorExtendingFrom(handles.r(time), T);
-
-
-if(get(handles.tangentLabel, 'Value'))
-    set(handles.tangentPlot, 'XData', tVector(1,:), ...
-        'YData', tVector(2,:), 'ZData', tVector(3,:));
-end
-
-
-function points = VectorExtendingFrom(point, vector)
-points = [point, point + vector];
-
-
-function updateGraph(handles)
-% If position display is enabled
-drawCurve(handles);
-
-drawPoint(handles);
-drawMotionVectorsAt(handles.tPoint, handles);
-drawUnitVectorsAt(handles.tPoint, handles);
-
-guidata(handles.figure1, handles);
-
-
-% Checks to see if the curve is a line
-function answer = curveIsLine(handles)
-answer = all(handles.acceleration == 0);
-
-% A curve is smooth if its second derivative is continuous and non-zero
-function answer = curveIsSmooth(handles)
-answer = ~(all(handles.velocity == 0) || any(handles.velocity == Inf));
-
-
 function tStartBox_Callback(hObject, eventdata, handles)
 % hObject    handle to tStartBox (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -782,16 +407,16 @@ end
 
 
 % --------------------------------------------------------------------
-function uitoggletool9_OnCallback(hObject, eventdata, handles)
-% hObject    handle to uitoggletool9 (see GCBO)
+function gridToggle_OnCallback(hObject, eventdata, handles)
+% hObject    handle to gridToggle (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 grid(handles.bigGraph, 'on');
 
 
 % --------------------------------------------------------------------
-function uitoggletool9_OffCallback(hObject, eventdata, handles)
-% hObject    handle to uitoggletool9 (see GCBO)
+function gridToggle_OffCallback(hObject, eventdata, handles)
+% hObject    handle to gridToggle (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 grid(handles.bigGraph, 'off');
@@ -811,18 +436,6 @@ set(handles.tEndBox, 'String', handles.tEnd);
 set(handles.divisionBox, 'String', handles.divisions);
 
 
-function text = displayDataPoint(obj, event_obj)
-% Customizes text of data tip
-position = get(event_obj, 'Position');
-dataIndex = get(event_obj, 'DataIndex');
-time = getTimeVector;
-text = sprintf('X: %f\nY: %f\nZ: %f\nTime: %f',...
-    position(1),...
-    position(2),...
-    position(3),...
-    time(dataIndex));
-
-
 % --- Executes when user attempts to close figure1.
 function figure1_CloseRequestFcn(hObject, eventdata, handles)
 % hObject    handle to figure1 (see GCBO)
@@ -832,11 +445,6 @@ function figure1_CloseRequestFcn(hObject, eventdata, handles)
 
 % Hint: delete(hObject) closes the figure
 delete(hObject);
-
-
-function t = getTimeVector
-CurvePlotter3D = getappdata(0, 'CurvePlotter3D');
-t = getappdata(CurvePlotter3D, 'Time');
 
 
 % --- Executes on button press in positionLabel.
@@ -1317,6 +925,70 @@ set(handles.playButton, 'String', 'Play');
 guidata(handles.figure1, handles);
 
 
+% --- Executes on button press in exactValues.
+function exactValues_Callback(hObject, eventdata, handles)
+% hObject    handle to exactValues (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of exactValues
+calculateArcLength(handles);
+calculateCurveLength(handles);
+
+if(get(hObject,'Value') == true)
+    set(hObject, 'ForegroundColor', 'White');
+else
+    set(hObject, 'ForegroundColor', 'Black');
+end
+
+function answer = exactValuesActivated(handles)
+answer = get(handles.exactValues, 'Value');
+
+
+
+
+
+
+%============== Update Callbacks
+
+% --- Executes on button press in updateFunctionButton.
+function handles = updateFunctionButton_Callback(hObject, eventdata, handles)
+% hObject    handle to updateFunctionButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+handles = checkDivisionNumber(handles);
+handles = checkCurveDomain(handles);
+handles = checkFunctionText(handles);
+handles = setFunctions(handles);
+handles = createCurve(handles);
+handles = updateTPoint(handles);
+updateGraph(handles);
+
+guidata(handles.figure1, handles);
+
+
+function handles = updateTPoint(handles)
+set(handles.timeBox, 'String', handles.tPoint);
+set(handles.timeSlider, 'Min', handles.tStart);
+set(handles.timeSlider, 'Max', handles.tEnd);
+set(handles.timeSlider, 'Value', handles.tPoint);
+
+calculateArcLength(handles);
+
+guidata(handles.figure1, handles);
+
+
+function updateGraph(handles)
+% If position display is enabled
+drawCurve(handles);
+
+drawPoint(handles);
+drawMotionVectorsAt(handles.tPoint, handles);
+drawUnitVectorsAt(handles.tPoint, handles);
+
+guidata(handles.figure1, handles);
 
 
 function updateTimer(object, eventdata)
@@ -1337,21 +1009,386 @@ guidata(handles.figure1, handles);
 
 
 
-% --- Executes on button press in exactValues.
-function exactValues_Callback(hObject, eventdata, handles)
-% hObject    handle to exactValues (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
-% Hint: get(hObject,'Value') returns toggle state of exactValues
-calculateArcLength(handles);
-calculateCurveLength(handles);
 
-if(get(hObject,'Value') == true)
-    set(hObject, 'ForegroundColor', 'White');
-else
-    set(hObject, 'ForegroundColor', 'Black');
+
+%============== Checking Functions
+
+function handles = checkDivisionNumber(handles)
+try
+    boxFunction = get(handles.divisionBox, 'String');
+    if ~(isa(eval([(boxFunction) ';']),'double'))
+        error('Must be a valid numerical expression.');
+    end
+    testNum = eval([boxFunction ';']);
+    
+    %if number is not a positive nonzero integer
+    if(testNum <= 0 || mod(testNum, 1) ~= 0)
+        error('Number of divisions must be a positive integer!');
+    end
+catch err
+    set(handles.divisionBox, 'String', handles.divisions);
+    errordlg(['ERROR SETTING NUMBER OF DIVISIONS: ' err.message], ...
+        'Input Error', 'modal');
 end
 
-function answer = exactValuesActivated(handles)
-answer = get(handles.exactValues, 'Value');
+handles.divisions = eval([get(handles.divisionBox, 'String') ';']);
+set(handles.divisionBox, 'String', handles.divisions);
+
+guidata(handles.figure1, handles);
+
+function handles = checkCurveDomain(handles)
+
+try
+    startString = get(handles.tStartBox, 'String');
+    endString = get(handles.tEndBox, 'String');
+    if ~(isa(eval([(startString) ';']),'double') && isa(eval([(endString) ';']),'double'))
+        error('Must be a valid numerical expression.');
+    end
+    testStart = eval([startString ';']);
+    testEnd = eval([endString ';']);
+    
+    if ~(testStart <= testEnd)
+        error('Invalid boundary conditions! Respect the comparison signs.');
+    end
+catch err
+    set(handles.tStartBox, 'String', handles.tStart);
+    set(handles.tEndBox, 'String', handles.tEnd);
+    errordlg(['INTERVAL ERROR: ' err.message], ...
+        'Input Error', 'modal');
+end
+
+handles.tStart = eval([get(handles.tStartBox, 'String') ';']);
+handles.tEnd = eval([get(handles.tEndBox, 'String') ';']);
+handles.tPoint = handles.tStart;
+set(handles.tStartBox, 'String', handles.tStart);
+set(handles.tEndBox, 'String', handles.tEnd);
+
+guidata(handles.figure1, handles);
+
+function handles = checkFunctionText(handles)
+
+syms('t');
+
+xVars = symvar(get(handles.xBox, 'String'));
+yVars = symvar(get(handles.yBox, 'String'));
+zVars = symvar(get(handles.zBox, 'String'));
+
+try
+    
+    if(isempty(xVars) && isempty(yVars) && isempty(zVars))
+        set(handles.xBox, 'String', char(handles.xFunction));
+        set(handles.yBox, 'String', char(handles.yFunction));
+        set(handles.zBox, 'String', char(handles.zFunction));
+        error(['Curve cannot be a constant point.']);
+    end
+    
+    %If corresponding text box has invalid code, reset to previous
+    
+    if isempty(xVars) || (strcmp(xVars{1},'t') && length(xVars) == 1)
+        handles.xFunction = sym(get(handles.xBox, 'String'));
+    else
+        set(handles.xBox, 'String', char(handles.xFunction));
+        error(['The formula must only have t as the variable.']);
+    end
+    
+    
+    if isempty(yVars) || (strcmp(yVars{1},'t') && length(yVars) == 1)
+        handles.yFunction = sym(get(handles.yBox, 'String'));
+    else
+        set(handles.yBox, 'String', char(handles.yFunction));
+        error(['The formula must only have t as the variable.']);
+    end
+    
+    
+    if isempty(zVars) || (strcmp(zVars{1},'t') && length(zVars) == 1)
+        handles.zFunction = sym(get(handles.zBox, 'String'));
+    else
+        set(handles.zBox, 'String', char(handles.zFunction));
+        error(['The formula must only have t as the variable.']);
+    end
+    
+catch err
+    errordlg(['FUNCTION ERROR: ' err.message], ...
+        'Input Error', 'modal');
+end
+
+guidata(handles.figure1, handles);
+
+
+
+
+
+
+%============== Setting Functions
+
+function handles = setFunctions(handles)
+
+% Sets functions to text
+
+handles.curve = [handles.xFunction; handles.yFunction; handles.zFunction];
+
+% Motion Vectors' text
+
+handles.velocity = diff(handles.curve);
+handles.acceleration = diff(handles.velocity);
+
+set(handles.positionText, 'String', ...
+    ['< ' char(handles.xFunction) ', '...
+    char(handles.yFunction) ', ' ...
+    char(handles.zFunction) ' >']);
+set(handles.velocityText, 'String', ...
+    ['< ' char(handles.velocity(1)) ', '...
+    char(handles.velocity(2)) ', ' ...
+    char(handles.velocity(3)) ' >']);
+set(handles.accelerationText, 'String', ...
+    ['< ' char(handles.acceleration(1)) ', '...
+    char(handles.acceleration(2)) ', ' ...
+    char(handles.acceleration(3)) ' >']);
+
+help = sprintf('i: %s\nj: %s\nk: %s', ...
+    char(handles.xFunction), ...
+    char(handles.yFunction), ...
+    char(handles.zFunction));
+set(handles.positionText, 'ToolTipString', help);
+help = sprintf('i: %s\nj: %s\nk: %s', ...
+    char(diff(handles.xFunction)), ...
+    char(diff(handles.yFunction)), ...
+    char(diff(handles.zFunction)));
+set(handles.velocityText, 'ToolTipString', help);
+help = sprintf('i: %s\nj: %s\nk: %s', ...
+    char(diff(handles.xFunction, 2)), ...
+    char(diff(handles.yFunction, 2)), ...
+    char(diff(handles.zFunction, 2)));
+set(handles.accelerationText, 'ToolTipString', help);
+
+if(curveIsLine(handles))
+    set(handles.accelerationLabel, 'Enable', 'off');
+    set(handles.normalLabel, 'Enable', 'off');
+    set(handles.binormalLabel, 'Enable', 'off');
+else
+    set(handles.accelerationLabel, 'Enable', 'on');
+    set(handles.normalLabel, 'Enable', 'on');
+    set(handles.binormalLabel, 'Enable', 'on');
+end
+
+guidata(handles.figure1, handles);
+
+function handles = calculateCurveLength(handles)
+
+% Calculate curve length
+handles.speed = matlabFunction(norm(handles.velocity));
+
+if(curveIsLine(handles))
+    length = norm(handles.r(handles.tEnd) - handles.r(handles.tStart));
+    
+    if(exactValuesActivated(handles))
+        position = symfun(handles.curve, sym('t'));
+        exactAnswer = norm(position(handles.tEnd)-position(handles.tStart));
+    end
+else
+    length = integral(handles.speed, handles.tStart, handles.tEnd);
+    
+    if(exactValuesActivated(handles))
+        exactAnswer = int(norm(handles.velocity), handles.tStart, handles.tEnd);
+    end
+end
+
+set(handles.lengthBox, 'String', length);
+
+if(exactValuesActivated(handles))
+    set(handles.lengthBox, 'ToolTipString', ...
+        ['Exact Answer: ' char(exactAnswer)]);
+else
+    set(handles.lengthBox, 'ToolTipString', '');
+end
+
+function arcLength = calculateArcLength(handles)
+if(curveIsLine(handles))
+    arcLength = norm(handles.r(handles.tPoint) - handles.r(handles.tStart));
+    
+    if(exactValuesActivated(handles))
+        position = symfun(handles.curve, sym('t'));
+        exactAnswer = norm(position(handles.tPoint)-position(handles.tStart));
+    end
+else
+    arcLength = integral(handles.speed, handles.tStart, handles.tPoint);
+    
+    if(exactValuesActivated(handles))
+        exactAnswer = int(norm(handles.velocity), handles.tStart, handles.tPoint);
+    end
+end
+set(handles.arcLengthText, 'String', arcLength);
+
+if(exactValuesActivated(handles))
+    set(handles.arcLengthText, 'ToolTipString', ...
+        ['Exact Answer: ' char(exactAnswer)]);
+else
+    set(handles.arcLengthText, 'ToolTipString', '');
+end
+
+
+function handles = createCurve(handles)
+t = linspace(handles.tStart, handles.tEnd, handles.divisions+1);
+handles.r = matlabFunction(handles.curve);
+
+setappdata(0, 'CurvePlotter3D', gcf);
+setappdata(gcf, 'Time', t);
+
+handles = calculateCurveLength(handles);
+
+guidata(handles.figure1, handles);
+
+function drawCurve(handles)
+t = getTimeVector;
+curve = zeros(3,length(t));
+for i = 1:length(t)
+    curve(:,i) = handles.r(t(i));
+end
+x = curve(1,:);
+y = curve(2,:);
+z = curve(3,:);
+
+set(handles.curvePlot, 'XData', x, 'YData', y, 'ZData', z);
+
+
+guidata(handles.figure1, handles);
+
+
+
+
+
+%============== Drawing Functions
+
+function drawPoint(handles)
+handles.point = (handles.r(handles.tPoint));
+x = handles.point(1);
+y = handles.point(2);
+z = handles.point(3);
+
+set(handles.pointPlot, 'XData', x, 'YData', y, 'ZData', z);
+
+guidata(handles.figure1, handles);
+
+function drawMotionVectorsAt(time, handles)
+
+
+if(get(handles.positionLabel, 'Value'))
+    rVector = VectorExtendingFrom([0;0;0], handles.r(time));
+    set(handles.positionPlot, 'XData', rVector(1,:), ...
+        'YData', rVector(2,:), 'ZData', rVector(3,:));
+end
+
+if(curveIsLine(handles))
+    handles.curvature = 0;
+    
+    v = matlabFunction(handles.velocity);
+    vVector = VectorExtendingFrom(handles.r(time), v());
+    if(get(handles.velocityLabel, 'Value'))
+        set(handles.velocityPlot, 'XData', vVector(1,:), ...
+            'YData', vVector(2,:), 'ZData', vVector(3,:));
+    end
+else
+    v = matlabFunction(handles.velocity);
+    vVector = VectorExtendingFrom(handles.r(time), v(time));
+    if(get(handles.velocityLabel, 'Value'))
+        set(handles.velocityPlot, 'XData', vVector(1,:), ...
+            'YData', vVector(2,:), 'ZData', vVector(3,:));
+    end
+    
+    a = matlabFunction(handles.acceleration);
+    
+    if(isempty(symvar(handles.acceleration)))
+        aVector = VectorExtendingFrom(handles.r(time), a());
+        
+        % Curvature
+        handles.curvature = norm(cross(v(time),a()))/(norm(v(time)))^3;
+    else
+        aVector = VectorExtendingFrom(handles.r(time), a(time));
+        % Curvature
+        handles.curvature = norm(cross(v(time),a(time)))/(norm(v(time)))^3;
+    end
+    if(get(handles.accelerationLabel, 'Value'))
+        set(handles.accelerationPlot, 'XData', aVector(1,:), ...
+            'YData', aVector(2,:), 'ZData', aVector(3,:));
+    end
+    
+    
+end
+
+set(handles.curvatureText, 'String', (handles.curvature));
+
+
+function drawUnitVectorsAt(time, handles)
+v = matlabFunction(handles.velocity);
+a = matlabFunction(handles.acceleration);
+
+if(curveIsLine(handles))
+    T = v();
+    T = T/norm(T);
+else
+    T = v(time);
+    T = T/norm(T);
+    % perpendicular component of acceleration
+    
+    if(isempty(symvar(handles.acceleration)))
+        N = a() - dot(a(),T);
+    else
+        N = a(time) - dot(a(time),T);
+    end
+    N = N/norm(N);
+    B = cross(T, N);
+    nVector = VectorExtendingFrom(handles.r(time), N);
+    bVector = VectorExtendingFrom(handles.r(time), B);
+    
+    if(get(handles.normalLabel, 'Value'))
+        set(handles.normalPlot, 'XData', nVector(1,:), ...
+            'YData', nVector(2,:), 'ZData', nVector(3,:));
+    end
+    if(get(handles.binormalLabel, 'Value'))
+        set(handles.binormalPlot, 'XData', bVector(1,:), ...
+            'YData', bVector(2,:), 'ZData', bVector(3,:));
+    end
+end
+
+tVector = VectorExtendingFrom(handles.r(time), T);
+
+
+if(get(handles.tangentLabel, 'Value'))
+    set(handles.tangentPlot, 'XData', tVector(1,:), ...
+        'YData', tVector(2,:), 'ZData', tVector(3,:));
+end
+
+
+%============== Helper Functions
+
+function points = VectorExtendingFrom(point, vector)
+points = [point, point + vector];
+
+
+% Checks to see if the curve is a line
+function answer = curveIsLine(handles)
+answer = all(handles.acceleration == 0);
+
+
+% A curve is smooth if its second derivative is continuous and non-zero
+function answer = curveIsSmooth(handles)
+answer = ~(all(handles.velocity == 0) || any(handles.velocity == Inf));
+
+
+function t = getTimeVector
+CurvePlotter3D = getappdata(0, 'CurvePlotter3D');
+t = getappdata(CurvePlotter3D, 'Time');
+
+
+% Sets Datatip Text
+function text = displayDataPoint(obj, event_obj)
+% Customizes text of data tip
+position = get(event_obj, 'Position');
+dataIndex = get(event_obj, 'DataIndex');
+time = getTimeVector;
+text = sprintf('X: %f\nY: %f\nZ: %f\nTime: %f',...
+    position(1),...
+    position(2),...
+    position(3),...
+    time(dataIndex));
