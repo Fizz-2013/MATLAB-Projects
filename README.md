@@ -60,3 +60,12 @@ The function then returns the equivalent resistance.
 
 `parseResistance(inputString)` returns the equivalent resistance of the given `inputString`.
 
+#rod_heating
+
+These are a bunch of programs designed to simulate the heating of a conductive, metal rod, using finite element analysis.
+
+We are simulating a 1m long copper rod, sitting in a bath of ice water at 0 degrees Celsius, with a 100W heater on the left end of the rod.
+
+- To run a visual simulator of the heating of the rod, run `heating_rod_visualizer.m`, or type `heating_rod_visualizer` in the MATLAB Command Prompt.
+- To plot the temperature vs. time plot at a specific point on the rod, use the `getTemperatureGradient.m` function.
+- The `heatingRodTimeStep.m` function does the actual heat flow calculations for each step.
