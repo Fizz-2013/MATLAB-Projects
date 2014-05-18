@@ -58,7 +58,7 @@ Brackets are allowed, and the order of operations is BDMPAS = Brackets, Division
 
 The function then returns the equivalent resistance.
 
-`parseResistance(inputString)` returns the equivalent resistance of the given `inputString`.
+`parseResistance(inputString)` returns the equivalent resistance of the given `inputString`, where `inputString` is just a string form of the circuit layout you type in.
 
 #rod_heating
 
