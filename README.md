@@ -58,5 +58,37 @@ Brackets are allowed, and the order of operations is BDMPAS = Brackets, Division
 
 The function then returns the equivalent resistance.
 
-`parseResistance(inputString)` returns the equivalent resistance of the given `inputString`.
+`parseResistance(inputString)` returns the equivalent resistance of the given `inputString`, where `inputString` is just a string form of the circuit layout you type in.
 
+####Example usage
+
+Say we have a circuit with a 1 Ohm resistor in series with a group of 2 4 ohm resistors in parallel.
+In a string form, this circuit layout would be: `1 + 4//4`.
+
+To find the equivalent resistance, you can use the program as a script/command to prompt you:
+
+    >> parseResistance
+    Enter the circuit resistance layout: 1 + 4//4
+    
+    ans =
+    
+         3
+      
+Or, you can use it more like a function:
+
+    >> parseResistance('1+4//4')
+    
+    ans =
+    
+         3
+    
+
+#rod_heating
+
+These are a bunch of programs designed to simulate the heating of a conductive, metal rod, using finite element analysis.
+
+We are simulating a 1m long copper rod, sitting in a bath of ice water at 0 degrees Celsius, with a 100W heater on the left end of the rod.
+
+- To run a visual simulator of the heating of the rod, run `heating_rod_visualizer.m`, or type `heating_rod_visualizer` in the MATLAB Command Prompt.
+- To plot the temperature vs. time plot at a specific point on the rod, use the `getTemperatureGradient.m` function. *Don't forget to surpress the output with a semi-colon; it's a big gradient matrix!*
+- The `heatingRodTimeStep.m` function does the actual heat flow calculations for each step.
