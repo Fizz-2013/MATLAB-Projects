@@ -23,7 +23,10 @@ Now you should have the repository on your local machine. Enjoy!
 
 A robust tool used to display graphical and mathematical information about 3D line curves, parametrized with respect to time. (This can be used in conjunction with Vector Calculus courses such as MATH 317)
 
-####Starting up the program
+####Installing the App
+Simply run the `Curve Plotter 3D.mlappinstall` file to install the app into your MATLAB.
+
+####Starting up the program without installing the App
 
 1. Open MATLAB
 2. In the *Current Folder* window, drag `CurvePlotter3D.m` into the *Command Window*, this will run the program.
