@@ -28,8 +28,9 @@ setParameters();
 
 calculateTemperatureGradient;
 
-plot(temperature(:, getDistanceIndex()));
-
+plotHandles = plot(temperature(:, getDistanceIndex()));
+xlabel('Time (s)');
+ylabel('Temperature (Celsius)');
 
 
 
