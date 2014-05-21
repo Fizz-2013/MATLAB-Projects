@@ -70,7 +70,7 @@ function handles = calculateTemperature(handles)
 handles.totalTime = str2double(get(handles.totalTimeBox, 'String'));
 handles.dt = str2double(get(handles.timeStepBox, 'String'));
 
-handles.temperature = getTemperatureGradient(0, handles.totalTime, handles.dt);
+handles.temperature = getTemperatureGradient(handles.totalTime, handles.dt);
 handles.timeSamples = size(handles.temperature, 1);
 
 
@@ -122,6 +122,7 @@ dt = handles.totalTime/handles.timeSamples;
 
 timeElapsed = (getTimeIndex(handles)-1)*dt;
 set(handles.elapsedTime, 'String', timeElapsed);
+hold off;
 plot(data, '--o');
 
 

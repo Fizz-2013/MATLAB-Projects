@@ -1,4 +1,4 @@
-function temperature = getTemperatureGradient(x, time, dt)
+function temperature = getTemperatureGradient(time, dt)
 % getTemperatureGradient returns the temperature gradient matrix of copper
 % rod, with a plot of temperature vs. time at the specified distance x
 % from the left end of the rod.
@@ -28,7 +28,10 @@ setParameters();
 
 calculateTemperatureGradient;
 
-plot(temperature(:, getDistanceIndex()));
+plot(temperature(:, getDistanceIndex(0.10)), 'r');
+hold on;
+plot(temperature(:, getDistanceIndex(0.50)), 'g');
+plot(temperature(:, getDistanceIndex(0.90)), 'b');
 xlabel('Time (s)');
 ylabel('Temperature (Celsius)');
 
@@ -47,7 +50,7 @@ ylabel('Temperature (Celsius)');
         parameters.density = 9000;
         
         % Cross-sectional area of circle radius 0.01m
-        parameters.crossArea = 0.01^2 * pi;
+        parameters.crossArea = 0.005^2 * pi;
         
         parameters.rodLength = 1;
         
@@ -67,12 +70,11 @@ ylabel('Temperature (Celsius)');
                 dt, parameters);
             
             temperature(t, :)  = rodState;
-            %     plot(data)
         end
         
     end
 
-    function distanceIndex = getDistanceIndex()
+    function distanceIndex = getDistanceIndex(x)
         % Calculates the index of the specified distance x
         if x<=0
             distanceIndex = 1;

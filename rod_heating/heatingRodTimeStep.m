@@ -1,4 +1,4 @@
-function newRodState = heatingRodTimeStep( lastRodState, dt, parameters )
+%% Calculating the Heat Flow through a Rod discretely
 % heatingRodTimeStep calculates the the heat flow discretely through a rod,
 % where lastRodState is an array containing the temperature through the rod
 % at a certain time. dt is the duration of the time step.
@@ -9,7 +9,9 @@ function newRodState = heatingRodTimeStep( lastRodState, dt, parameters )
 %     parameters.c            % Specific Heat Capacity of rod material
 %     parameters.density      % Density of the rod material
 %     parameters.crossArea    % Cross sectional area of rod
-%     
+% 
+
+function newRodState = heatingRodTimeStep( lastRodState, dt, parameters )    
 
 %% Discrete Variables
 
@@ -27,16 +29,21 @@ newRodState = lastRodState;
 %% Leftmost Segment
     
 % 100W coming in from left, 100J/s * dt = Joules gained in that time
-heatIntoSegmentLeft = 100*dt;
-
+tempDiffLeft = lastRodState(1) - 0;
 tempDiffRight = lastRodState(1)-lastRodState(2);
+tempDiff = tempDiffLeft + tempDiffRight;
 
-heatIntoSegmentRight = (-parameters.kappa*parameters.crossArea)*(dt/dx)*tempDiffRight;
+heatIntoSegment = (-parameters.kappa*parameters.crossArea)*(dt/dx)*tempDiff;
 
-heatIntoSegment = heatIntoSegmentLeft + heatIntoSegmentRight;
+heatOutConvection = 1*2*pi*0.005*dx * (lastRodState(1) - 0);
 
-tempIncrease = heatIntoSegment/(parameters.specificHeatCapacity*dm);
+heatIntoSegment = (-parameters.kappa*parameters.crossArea)*(dt/dx)*tempDiff;
+
+totalHeat = heatIntoSegment - heatOutConvection;
+
+tempIncrease = totalHeat/(parameters.specificHeatCapacity*dm);
 newRodState(1) = newRodState(1) + tempIncrease;
+
 
     
 %% Middle segments (excluding end points)
@@ -51,7 +58,9 @@ for segment = 2:(segments-1)
 
     heatIntoSegment = (-parameters.kappa*parameters.crossArea)*(dt/dx)*tempDiff;
 
-    tempIncrease = heatIntoSegment/(parameters.specificHeatCapacity*dm);
+    heatOutConvection = 1*2*pi*0.005*dx * (lastRodState(segment) - 0);
+
+    tempIncrease = (heatIntoSegment-heatOutConvection)/(parameters.specificHeatCapacity*dm);
 
     newRodState(segment) = newRodState(segment) + tempIncrease;
 end
@@ -62,16 +71,16 @@ end
 % Losing heat to 0 celsius at right end
 
 tempDiffLeft = lastRodState(end)-lastRodState(end-1);
-tempDiffRight = lastRodState(end) - 0;
+tempDiffRight = lastRodState(end) - 100;
 tempDiff = tempDiffLeft + tempDiffRight;
 
 heatIntoSegment = (-parameters.kappa*parameters.crossArea)*(dt/dx)*tempDiff;
+heatOutConvection = 1*2*pi*0.005*dx * (lastRodState(end) - 0);
 
-tempIncrease = heatIntoSegment/(parameters.specificHeatCapacity*dm);
+tempIncrease = (heatIntoSegment-heatOutConvection)/(parameters.specificHeatCapacity*dm);
 
 newRodState(end) = newRodState(end) + tempIncrease;
 
 
-%% Finishing
 end
 
